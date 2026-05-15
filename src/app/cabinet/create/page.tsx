@@ -29,7 +29,7 @@ export default function CreateRecipePage() {
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([""]);
 
-  const [steps, setRecipeSteps] = useState<{ text: string; image: File | null; imagePreview: string | null; timerMinutes?: string }>([
+  const [steps, setRecipeSteps] = useState<any[]>([
     { text: "", image: null, imagePreview: null, timerMinutes: "" }
   ]);
 
