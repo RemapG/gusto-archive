@@ -36,7 +36,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
         
         if (result.success) {
           setContent(result.content);
-          setPurchased(result.purchased);
+          setPurchased(result.purchased ?? false);
         } else {
           setPurchased(false);
         }
