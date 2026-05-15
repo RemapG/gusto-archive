@@ -29,7 +29,7 @@ export async function getPurchasedRecipesAction() {
       }
     });
 
-    const recipes = purchases.map(p => ({
+    const recipes = purchases.map((p: any) => ({
       id: p.recipe.id,
       title: p.recipe.title,
       category: p.recipe.category,
