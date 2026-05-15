@@ -11,7 +11,7 @@ export default async function Home() {
   });
 
   // Map to the format the client expects if necessary
-  const formattedRecipes = recipes.map(r => ({
+  const formattedRecipes = recipes.map((r: any) => ({
     id: r.id,
     title: r.title,
     category: r.category,
