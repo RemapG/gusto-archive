@@ -1,38 +1,40 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
+import { prisma } from "../../lib/prisma";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
-export async function deleteRecipeAction(recipeId: string, accessToken: string) {
+export async function deleteRecipeAction(recipeId: string) {
   try {
-    const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    })
+    const session = await getServerSession(authOptions);
+    
+    // Authorization check
+    if (!session || (session.user as any).role !== 'admin') {
+      return { success: false, error: "У вас нет прав для удаления этого рецепта" };
+    }
 
-    // 1. Delete from recipe_contents (though ON DELETE CASCADE should handle it)
-    const { error: contentError } = await supabase
-      .from('recipe_contents')
-      .delete()
-      .eq('recipe_id', recipeId)
+    // 1. Delete associated contents first (Prisma doesn't do cascade automatically if not defined in schema)
+    await prisma.recipeContent.deleteMany({
+      where: { recipeId }
+    });
 
-    if (contentError) throw contentError;
+    // 2. Delete associated purchases
+    await prisma.purchase.deleteMany({
+      where: { recipeId }
+    });
 
-    // 2. Delete from recipes
-    const { error: recipeError } = await supabase
-      .from('recipes')
-      .delete()
-      .eq('id', recipeId)
+    // 3. Finally delete the recipe itself
+    await prisma.recipe.delete({
+      where: { id: recipeId }
+    });
 
-    if (recipeError) throw recipeError;
+    revalidatePath("/");
 
     return { success: true };
   } catch (err: any) {
-    console.error('Error in deleteRecipeAction:', err);
+    console.error('Error in deleteRecipeAction (Prisma):', err);
     return { success: false, error: err.message };
   }
 }

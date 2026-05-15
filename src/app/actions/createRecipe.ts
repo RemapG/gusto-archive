@@ -1,11 +1,10 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
+import { prisma } from "../../lib/prisma";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function createRecipeAction(
   recipeData: {
@@ -16,48 +15,37 @@ export async function createRecipeAction(
     image_url: string;
     ingredients: string[];
     steps: { text: string; image_url: string | null }[];
-  },
-  accessToken: string
+  }
 ) {
   try {
-    // Initialize client with the user's access token to respect RLS
-    const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    })
+    const session = await getServerSession(authOptions);
+    
+    if (!session || (session.user as any).role !== 'admin') {
+      return { success: false, error: "У вас нет прав для создания рецептов" };
+    }
 
-    // 1. Insert into recipes
-    const { data: recipe, error: recipeError } = await supabase
-      .from("recipes")
-      .insert({
+    // 1. Insert into recipes and contents
+    const recipe = await prisma.recipe.create({
+      data: {
         title: recipeData.title,
         category: recipeData.category,
         description: recipeData.description,
         price: recipeData.price,
-        image_url: recipeData.image_url
-      })
-      .select()
-      .single();
+        imageUrl: recipeData.image_url,
+        contents: {
+          create: {
+            ingredients: recipeData.ingredients.filter(i => i.trim() !== ""),
+            steps: recipeData.steps.filter(s => s.text.trim() !== "")
+          }
+        }
+      }
+    });
 
-    if (recipeError) throw recipeError;
-
-    // 2. Insert into recipe_contents
-    const { error: contentError } = await supabaseAdmin
-      .from("recipe_contents")
-      .insert({
-        recipe_id: recipe.id,
-        ingredients: recipeData.ingredients.filter(i => i.trim() !== ""),
-        steps: recipeData.steps.filter(s => s.text.trim() !== "")
-      });
-
-    if (contentError) throw contentError;
+    revalidatePath("/");
 
     return { success: true, recipeId: recipe.id };
   } catch (err: any) {
-    console.error('Error in createRecipeAction:', err);
+    console.error('Error in createRecipeAction (Prisma):', err);
     return { success: false, error: err.message };
   }
 }

@@ -5,51 +5,25 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, ChefHat, User, LogOut, Plus, Filter } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { getUserRole } from "./actions/getRole";
+import { useSession, signOut } from "next-auth/react";
 
 export default function HomePageClient({ initialRecipes }: { initialRecipes: any[] }) {
+  const { data: session } = useSession();
   const [recipes, setRecipes] = useState<any[]>(initialRecipes);
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string>("user");
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchRole = async (userId: string) => {
-      const userRole = await getUserRole(userId);
-      setRole(userRole);
-    };
-
-    // Check auth on load
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser(data.user);
-        fetchRole(data.user.id);
-      }
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchRole(currentUser.id);
-      } else {
-        setRole("user");
-      }
-    });
-
-    return () => authListener.subscription.unsubscribe();
-  }, []);
+  const user = session?.user;
+  const role = (session?.user as any)?.role || "user";
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
+    router.push("/");
     router.refresh();
   };
 
   const handleSeedData = async () => {
-    alert("Пожалуйста, выполните SQL скрипт из предыдущего сообщения в вашем Supabase SQL Editor. По соображениям безопасности клиент не может сам создавать рецепты без прав администратора.");
+
   };
 
   return (
@@ -136,11 +110,7 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
         </div>
 
         {/* Content Area */}
-        {loading ? (
-           <div className="w-full h-[400px] flex items-center justify-center text-muted-foreground uppercase tracking-widest text-xs animate-pulse">
-             Загрузка архива...
-           </div>
-        ) : recipes.length === 0 ? (
+        {recipes.length === 0 ? (
           /* Empty State */
           <motion.div 
             initial={{ opacity: 0 }}

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import RecipeClient from "./RecipeClient";
 
 export const revalidate = 0;
@@ -6,12 +6,10 @@ export const revalidate = 0;
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = await params;
   
-  // Fetch the public recipe metadata on the server (Lightning fast, bypasses client ISP blocks)
-  const { data: recipe } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("id", unwrappedParams.id)
-    .single();
+  // Fetch the recipe metadata using Prisma
+  const recipe = await prisma.recipe.findUnique({
+    where: { id: unwrappedParams.id }
+  });
 
   if (!recipe) {
     return (
@@ -21,5 +19,15 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     );
   }
 
-  return <RecipeClient initialRecipe={recipe} recipeId={unwrappedParams.id} />;
+  const formattedRecipe = {
+    id: recipe.id,
+    title: recipe.title,
+    category: recipe.category,
+    description: recipe.description,
+    price: Number(recipe.price),
+    image_url: recipe.imageUrl,
+    created_at: recipe.createdAt.toISOString()
+  };
+
+  return <RecipeClient initialRecipe={formattedRecipe} recipeId={unwrappedParams.id} />;
 }

@@ -2,122 +2,176 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ChefHat, ArrowRight, Lock, Mail, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { registerUserAction } from "../actions/register";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isRegister, setIsRegister] = useState(false);
   const router = useRouter();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccessMsg(null);
     setLoading(true);
+    setError(null);
 
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError("Неверный email или пароль");
-      else {
-        router.push("/");
-        router.refresh();
+    try {
+      if (isRegister) {
+        const formData = new FormData();
+        formData.append("email", email);
+        formData.append("password", password);
+        
+        const result = await registerUserAction(formData);
+        if (result.success) {
+          // Auto login after registration
+          const loginResult = await signIn("credentials", {
+            email,
+            password,
+            redirect: false,
+          });
+          if (loginResult?.ok) {
+            router.push("/cabinet");
+            router.refresh();
+          }
+        } else {
+          setError(result.error || "Ошибка регистрации");
+        }
+      } else {
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Неверный email или пароль");
+        } else {
+          router.push("/cabinet");
+          router.refresh();
+        }
       }
-    } else {
-      const { error, data } = await supabase.auth.signUp({ 
-        email, 
-        password,
-      });
-      if (error) setError(error.message);
-      else if (data.user && data.user.identities && data.user.identities.length === 0) {
-         setError("Пользователь с таким email уже существует");
-      }
-      else {
-        setSuccessMsg("Регистрация успешна! Проверьте вашу почту или войдите.");
-        setIsLogin(true);
-      }
+    } catch (err) {
+      setError("Произошла ошибка");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-neutral-900 selection:bg-neutral-200 flex flex-col">
-      <header className="px-8 py-6 md:px-16 md:py-8 w-full max-w-[1600px] mx-auto absolute top-0 left-0 right-0 z-10">
-        <Link href="/" className="inline-flex items-center text-sm uppercase tracking-wider text-neutral-500 hover:text-black transition-colors font-medium">
-          <ArrowLeft size={16} className="mr-2" />
-          Назад к витрине
-        </Link>
-      </header>
-
-      <div className="flex-1 flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="w-full max-w-md p-8 md:p-12 border border-neutral-200 bg-white shadow-sm rounded-sm"
-        >
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-light tracking-tight mb-2 uppercase tracking-widest">{isLogin ? "Вход" : "Регистрация"}</h1>
-            <p className="text-neutral-500 text-sm font-light">
-              {isLogin ? "Добро пожаловать в Atelier" : "Присоединяйтесь к эксклюзивному клубу"}
-            </p>
+    <main className="min-h-screen bg-[#f6f5f0] flex flex-col items-center justify-center p-6 selection:bg-[#e8e6df]">
+      {/* Logo and Brand */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 text-center"
+      >
+        <Link href="/" className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 bg-[#2d2c2a] rounded-full flex items-center justify-center shadow-2xl">
+            <ChefHat size={32} className="text-[#f6f5f0]" />
           </div>
+          <div>
+            <h1 className="font-serif italic text-4xl tracking-tight text-[#2d2c2a]">Gusto</h1>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-[#8a8883] font-bold mt-1">Архив Техкарт</p>
+          </div>
+        </Link>
+      </motion.div>
 
-          {error && <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm font-light rounded-sm border border-red-100">{error}</div>}
-          {successMsg && <div className="mb-6 p-4 bg-green-50 text-green-600 text-sm font-light rounded-sm border border-green-100">{successMsg}</div>}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.1 }}
+        className="w-full max-w-md bg-white rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-10 md:p-12 border border-[#f1f0e9]"
+      >
+        <div className="mb-10 text-center">
+          <h2 className="text-2xl font-serif italic text-[#2d2c2a] mb-2">
+            {isRegister ? "Создать аккаунт" : "Добро пожаловать"}
+          </h2>
+          <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-bold">
+            {isRegister ? "ПРИСОЕДИНЯЙТЕСЬ К ГАСТРОНОМИЧЕСКОМУ АРХИВУ" : "ВОЙДИТЕ ДЛЯ ДОСТУПА К КОЛЛЕКЦИИ"}
+          </p>
+        </div>
 
-          <form onSubmit={handleAuth} className="space-y-6">
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-medium">Email</label>
-              <input 
-                type="email" 
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-[#8a8883] font-bold ml-1">Email</label>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-[#8a8883] group-focus-within:text-[#2d2c2a] transition-colors">
+                <Mail size={16} />
+              </div>
+              <input
+                type="email"
+                placeholder="chef@gusto.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#fcfcf9] border border-[#f1f0e9] rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-[#2d2c2a] focus:ring-4 focus:ring-[#2d2c2a]/5 transition-all placeholder:text-[#c4c2ba]"
                 required
-                className="w-full border-b border-neutral-300 py-3 px-1 bg-transparent focus:outline-none focus:border-black transition-colors font-light placeholder-neutral-300 text-lg"
-                placeholder="ваша@почта.com"
               />
             </div>
-            
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-medium">Пароль</label>
-              <input 
-                type="password" 
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-[#8a8883] font-bold ml-1">Пароль</label>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-[#8a8883] group-focus-within:text-[#2d2c2a] transition-colors">
+                <Lock size={16} />
+              </div>
+              <input
+                type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#fcfcf9] border border-[#f1f0e9] rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-[#2d2c2a] focus:ring-4 focus:ring-[#2d2c2a]/5 transition-all placeholder:text-[#c4c2ba]"
                 required
-                minLength={6}
-                className="w-full border-b border-neutral-300 py-3 px-1 bg-transparent focus:outline-none focus:border-black transition-colors font-light placeholder-neutral-300 text-lg"
-                placeholder="••••••"
               />
             </div>
+          </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-neutral-900 text-white hover:bg-neutral-800 transition-colors py-4 text-sm font-medium uppercase tracking-widest rounded-sm mt-8 disabled:opacity-50"
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="flex items-center gap-3 text-red-500 bg-red-50 p-4 rounded-2xl text-xs border border-red-100 font-medium"
             >
-              {loading ? "Загрузка..." : (isLogin ? "Войти" : "Создать аккаунт")}
-            </button>
-          </form>
+              <AlertCircle size={16} />
+              {error}
+            </motion.div>
+          )}
 
-          <div className="mt-8 text-center text-sm font-light text-neutral-500">
-            {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#2d2c2a] text-[#f6f5f0] rounded-2xl py-5 font-bold text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed group active:scale-[0.98]"
+          >
+            {loading ? (isRegister ? "Создаем..." : "Входим...") : (isRegister ? "Зарегистрироваться" : "Получить доступ")}
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <div className="text-center pt-4">
             <button 
-              onClick={() => { setIsLogin(!isLogin); setError(null); setSuccessMsg(null); }}
-              className="text-black hover:underline font-medium uppercase tracking-widest text-xs ml-2"
+              type="button"
+              onClick={() => { setIsRegister(!isRegister); setError(null); }}
+              className="text-[10px] uppercase tracking-widest text-[#8a8883] hover:text-[#2d2c2a] transition-colors font-bold underline underline-offset-4 decoration-[#f1f0e9]"
             >
-              {isLogin ? "Зарегистрироваться" : "Войти"}
+              {isRegister ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Создать"}
             </button>
           </div>
-        </motion.div>
-      </div>
+        </form>
+      </motion.div>
+
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="mt-12 text-[10px] uppercase tracking-widest text-[#8a8883] font-medium"
+      >
+        Gusto Culinary Boutique © 2026
+      </motion.p>
     </main>
   );
 }

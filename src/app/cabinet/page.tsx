@@ -1,57 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ChefHat, Plus, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
-
-import { getUserRole } from "../actions/getRole";
+import { useSession, signOut } from "next-auth/react";
+import { getPurchasedRecipesAction } from "../actions/getPurchasedRecipes";
 
 export default function CabinetPage() {
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string>("user");
+  const { data: session, status } = useSession();
   const [purchasedRecipes, setPurchasedRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const user = session?.user;
+  const role = (session?.user as any)?.role || "user";
+
   useEffect(() => {
-    async function loadData() {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) {
-        router.push("/auth");
-        return;
-      }
-      setUser(authData.user);
-
-      // Fetch user role via Server Action (bypassing proxy 406 error)
-      const userRole = await getUserRole(authData.user.id);
-      setRole(userRole);
-
-      // Fetch purchased recipes
-      const { data: purchases } = await supabase
-        .from("purchases")
-        .select(`
-          recipe_id,
-          recipes ( id, title, category, image_url )
-        `)
-        .eq("user_id", authData.user.id);
-      
-      if (purchases) {
-        // Unpack nested response
-        const mappedRecipes = purchases.map((p: any) => p.recipes);
-        setPurchasedRecipes(mappedRecipes.filter(r => r !== null));
-      }
-
-      setLoading(false);
+    if (status === "unauthenticated") {
+      router.push("/auth");
+      return;
     }
-    loadData();
-  }, [router]);
+
+    if (status === "authenticated") {
+      async function loadData() {
+        const result = await getPurchasedRecipesAction();
+        if (result.success) {
+          setPurchasedRecipes(result.recipes || []);
+        }
+        setLoading(false);
+      }
+      loadData();
+    }
+  }, [status, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push("/");
   };
 

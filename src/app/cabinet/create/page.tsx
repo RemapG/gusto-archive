@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getUserRole } from "../../actions/getRole";
 import { createRecipeAction } from "../../actions/createRecipe";
+import { uploadToS3Action } from "../../actions/uploadToS3";
+import { useSession } from "next-auth/react";
 
 export default function CreateRecipePage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,23 +34,20 @@ export default function CreateRecipePage() {
   ]);
 
   useEffect(() => {
-    async function checkAdmin() {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) {
-        router.push("/auth");
-        return;
-      }
-      
-      const role = await getUserRole(authData.user.id);
-      
+    if (status === "unauthenticated") {
+      router.push("/auth");
+      return;
+    }
+
+    if (status === "authenticated") {
+      const role = (session?.user as any)?.role || "user";
       if (role !== "admin") {
         router.push("/cabinet");
         return;
       }
       setLoading(false);
     }
-    checkAdmin();
-  }, [router]);
+  }, [status, router, session]);
 
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -67,57 +67,41 @@ export default function CreateRecipePage() {
     }
   };
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = fileName; // Upload directly to bucket root
-
-    const { error: uploadError } = await supabase.storage
-      .from('recipes')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      throw uploadError;
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const result = await uploadToS3Action(formData);
+    if (!result.success) {
+      throw new Error(result.error || "Upload failed");
     }
-
-    const { data } = supabase.storage.from('recipes').getPublicUrl(filePath);
-    return data.publicUrl;
+    return result.url!;
   };
-
-
-
 
   const handleSave = async () => {
     try {
+      console.log("Saving recipe started...");
       setSaving(true);
       setError(null);
 
       // 1. Upload Main Image
       let mainImageUrl = "/placeholder.jpg";
       if (mainImage) {
-        mainImageUrl = await uploadImage(mainImage);
+        console.log("Uploading main image...");
+        mainImageUrl = await uploadFile(mainImage);
       }
 
       // 2. Upload Step Images
+      console.log("Uploading step images...");
       const finalSteps = await Promise.all(steps.map(async (s) => {
         let stepImgUrl = null;
         if (s.image) {
-          stepImgUrl = await uploadImage(s.image);
+          stepImgUrl = await uploadFile(s.image);
         }
         return { text: s.text, image_url: stepImgUrl };
       }));
 
       // 3. Use Server Action for Database Operations
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-
-      if (!accessToken) {
-        throw new Error("Не удалось получить токен авторизации");
-      }
-
+      console.log("Creating recipe in database...");
       const result = await createRecipeAction({
         title,
         category,
@@ -126,22 +110,39 @@ export default function CreateRecipePage() {
         image_url: mainImageUrl,
         ingredients,
         steps: finalSteps
-      }, accessToken);
+      });
 
       if (!result.success) {
         throw new Error(result.error);
       }
 
-      router.push(`/recipe/${result.recipeId}`);
+      console.log("Recipe created successfully, redirecting...");
+      setSuccess(true);
+      
+      // Delay slightly for visual feedback then redirect
+      setTimeout(() => {
+        router.push(`/recipe/${result.recipeId}`);
+        router.refresh();
+      }, 1000);
       
     } catch (err: any) {
-      console.error(err);
+      console.error("Save error:", err);
       setError(err.message || "Ошибка при сохранении рецепта");
       setSaving(false);
     }
   };
 
   if (loading) return <div className="min-h-screen bg-[#f6f5f0] flex items-center justify-center font-medium text-xs uppercase tracking-widest text-[#8a8883] animate-pulse">Проверка прав...</div>;
+
+  if (success) return (
+    <div className="min-h-screen bg-[#f6f5f0] flex flex-col items-center justify-center font-serif italic text-2xl gap-4">
+      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+        <Check size={64} className="text-green-600 mb-4 mx-auto" />
+        <p>Рецепт успешно опубликован!</p>
+        <p className="text-xs font-sans uppercase tracking-[0.2em] text-[#8a8883] mt-2 non-italic">Перенаправляем в архив...</p>
+      </motion.div>
+    </div>
+  );
 
   return (
     <main className="min-h-screen bg-[#f6f5f0] text-[#2d2c2a] selection:bg-[#e8e6df] font-sans pb-32">

@@ -5,39 +5,38 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { getUserRole } from "../../actions/getRole";
 import { deleteRecipeAction } from "../../actions/deleteRecipe";
+import { getRecipeContentAction } from "../../actions/getRecipeContent";
+import { createPurchaseAction } from "../../actions/createPurchase";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function RecipeClient({ initialRecipe, recipeId }: { initialRecipe: any, recipeId: string }) {
+  const { data: session } = useSession();
   const router = useRouter();
   const recipe = initialRecipe;
   const [content, setContent] = useState<any>(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [purchased, setPurchased] = useState<boolean | null>(null); // null = checking, true = yes, false = no
-  const [role, setRole] = useState<string>("user");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const role = (session?.user as any)?.role || "user";
 
   useEffect(() => {
     async function checkAccess() {
+      if (!session) {
+        setLoadingContent(false);
+        setPurchased(false);
+        return;
+      }
+
       setLoadingContent(true);
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (authData.user) {
-          const userRole = await getUserRole(authData.user.id);
-          setRole(userRole);
-        }
-
-        const { data: contentResponse } = await supabase
-          .from("recipe_contents")
-          .select("*")
-          .eq("recipe_id", recipeId)
-          .maybeSingle();
-
-        if (contentResponse) {
-          setContent(contentResponse);
-          setPurchased(true); 
+        const result = await getRecipeContentAction(recipeId);
+        
+        if (result.success) {
+          setContent(result.content);
+          setPurchased(result.purchased);
         } else {
           setPurchased(false);
         }
@@ -49,37 +48,27 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
       }
     }
     checkAccess();
-  }, [recipeId]);
+  }, [recipeId, session]);
 
   const handlePurchase = async () => {
-    const { data: authData } = await supabase.auth.getUser();
-    
-    if (!authData.user) {
-      alert("Для доступа необходимо войти в аккаунт.");
+    if (!session) {
+      router.push("/auth");
       return;
     }
 
-    // Insert purchase for real
-    const { error } = await supabase.from("purchases").insert({
-      user_id: authData.user.id,
-      recipe_id: recipeId
-    });
-
-    if (error && error.code !== '23505') {
-      alert("Ошибка при добавлении в коллекцию: " + error.message);
-      return;
-    }
-
-    // Refetch content now that we have access
-    const { data: contentData } = await supabase
-      .from("recipe_contents")
-      .select("*")
-      .eq("recipe_id", recipeId)
-      .maybeSingle();
-    
-    if (contentData) {
-      setContent(contentData);
-      setPurchased(true);
+    try {
+      const result = await createPurchaseAction(recipeId);
+      if (result.success) {
+        const contentResult = await getRecipeContentAction(recipeId);
+        if (contentResult.success) {
+          setContent(contentResult.content);
+          setPurchased(true);
+        }
+      } else {
+        alert("Ошибка при покупке: " + result.error);
+      }
+    } catch (err: any) {
+      alert("Ошибка при покупке: " + err.message);
     }
   };
 
@@ -88,13 +77,9 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
 
     try {
       setIsDeleting(true);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      
-      if (!token) throw new Error("Не удалось авторизоваться");
-
-      const result = await deleteRecipeAction(recipeId, token);
+      const result = await deleteRecipeAction(recipeId);
       if (result.success) {
+        alert("Рецепт успешно удален из архива.");
         router.push("/");
       } else {
         throw new Error(result.error);
@@ -130,36 +115,52 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
 
       {/* Hero Section */}
       <section className="max-w-[1400px] mx-auto px-6 md:px-16 pt-10 md:pt-16 pb-16 md:pb-24 border-b border-[#f1f0e9]">
-        <div className="max-w-4xl">
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-[9px] md:text-[10px] text-[#8a8883] uppercase tracking-[0.3em] mb-4 md:mb-6 font-bold"
-          >
-            {recipe.category} • ТЕХНИЧЕСКАЯ КАРТА
-          </motion.p>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-8xl font-serif italic tracking-tight leading-[1.2] md:leading-[1.1] mb-8 md:mb-12 text-[#2d2c2a]"
-          >
-            {recipe.title}
-          </motion.h1>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 md:gap-20">
+          <div className="max-w-4xl flex-1">
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[9px] md:text-[10px] text-[#8a8883] uppercase tracking-[0.3em] mb-4 md:mb-6 font-bold"
+            >
+              {recipe.category} • ТЕХНИЧЕСКАЯ КАРТА
+            </motion.p>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-8xl font-serif italic tracking-tight leading-[1.2] md:leading-[1.1] mb-8 md:mb-12 text-[#2d2c2a]"
+            >
+              {recipe.title}
+            </motion.h1>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12"
+            >
+              <div className="flex flex-col">
+                <span className="text-[9px] uppercase tracking-widest text-[#8a8883] mb-1">Стоимость доступа</span>
+                <span className="text-xl md:text-2xl font-medium">{recipe.price} ₽</span>
+              </div>
+              <div className="hidden md:block h-10 w-[1px] bg-[#e2e0d8]" />
+              <p className="text-xs text-[#8a8883] font-medium leading-relaxed max-w-md uppercase tracking-wider">
+                {recipe.description}
+              </p>
+            </motion.div>
+          </div>
+
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="w-full lg:w-[400px] aspect-[4/5] relative rounded-[3rem] overflow-hidden shadow-2xl shadow-black/5 border border-[#f1f0e9]"
           >
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-widest text-[#8a8883] mb-1">Стоимость доступа</span>
-              <span className="text-xl md:text-2xl font-medium">{recipe.price} ₽</span>
-            </div>
-            <div className="hidden md:block h-10 w-[1px] bg-[#e2e0d8]" />
-            <p className="text-xs text-[#8a8883] font-medium leading-relaxed max-w-md uppercase tracking-wider">
-              {recipe.description}
-            </p>
+            <Image 
+              src={recipe.imageUrl || "/scallop.png"}
+              alt={recipe.title}
+              fill
+              className="object-cover"
+            />
           </motion.div>
         </div>
       </section>
