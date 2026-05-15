@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon, Timer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRecipeAction } from "../../actions/createRecipe";
 import { uploadToS3Action } from "../../actions/uploadToS3";
@@ -29,8 +29,8 @@ export default function CreateRecipePage() {
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([""]);
 
-  const [steps, setRecipeSteps] = useState<{ text: string; image: File | null; imagePreview: string | null }[]>([
-    { text: "", image: null, imagePreview: null }
+  const [steps, setRecipeSteps] = useState<{ text: string; image: File | null; imagePreview: string | null; timerMinutes?: string }>([
+    { text: "", image: null, imagePreview: null, timerMinutes: "" }
   ]);
 
   useEffect(() => {
@@ -97,7 +97,11 @@ export default function CreateRecipePage() {
         if (s.image) {
           stepImgUrl = await uploadFile(s.image);
         }
-        return { text: s.text, image_url: stepImgUrl };
+        return { 
+          text: s.text, 
+          image_url: stepImgUrl,
+          timer: s.timerMinutes ? parseInt(s.timerMinutes) * 60 : null 
+        };
       }));
 
       // 3. Use Server Action for Database Operations
@@ -257,7 +261,24 @@ export default function CreateRecipePage() {
                       <span className="absolute -left-3 top-0 w-6 h-6 rounded-full bg-[#f6f5f0] border border-[#e2e0d8] flex items-center justify-center text-[10px] font-medium">{i + 1}</span>
                       
                       <div className="flex flex-col md:flex-row gap-6">
-                        <textarea value={s.text} onChange={e => { const newSteps = [...steps]; newSteps[i].text = e.target.value; setRecipeSteps(newSteps); }} rows={4} className="flex-1 border border-[#e2e0d8] rounded-2xl p-4 bg-transparent focus:outline-none focus:border-black font-light resize-none" placeholder={`Описание шага ${i + 1}...`} />
+                        <div className="flex-1 flex flex-col gap-3">
+                          <textarea value={s.text} onChange={e => { const newSteps = [...steps]; newSteps[i].text = e.target.value; setRecipeSteps(newSteps); }} rows={4} className="w-full border border-[#e2e0d8] rounded-2xl p-4 bg-transparent focus:outline-none focus:border-black font-light resize-none" placeholder={`Описание шага ${i + 1}...`} />
+                          <div className="flex items-center gap-2">
+                            <Timer size={14} className="text-[#8a8883]" />
+                            <input 
+                              type="number" 
+                              placeholder="Таймер (мин)" 
+                              value={s.timerMinutes || ""} 
+                              onChange={e => {
+                                 const newSteps = [...steps]; 
+                                 newSteps[i].timerMinutes = e.target.value; 
+                                 setRecipeSteps(newSteps); 
+                              }}
+                              className="border border-[#e2e0d8] rounded-lg px-3 py-1.5 text-xs font-light focus:outline-none focus:border-black w-32 bg-white"
+                            />
+                            <span className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">Опционально</span>
+                          </div>
+                        </div>
                         
                         <div className="w-full md:w-40 flex-shrink-0">
                           <label className="block w-full h-24 border border-dashed border-[#e2e0d8] rounded-2xl overflow-hidden relative cursor-pointer hover:bg-[#f6f5f0] transition-colors flex items-center justify-center group">
@@ -279,7 +300,7 @@ export default function CreateRecipePage() {
                     </div>
                   ))}
 
-                  <button onClick={() => setRecipeSteps([...steps, { text: "", image: null, imagePreview: null }])} className="text-[10px] font-medium uppercase tracking-widest flex items-center gap-2 hover:opacity-70 bg-[#f6f5f0] px-6 py-3 rounded-full">
+                  <button onClick={() => setRecipeSteps([...steps, { text: "", image: null, imagePreview: null, timerMinutes: "" }])} className="text-[10px] font-medium uppercase tracking-widest flex items-center gap-2 hover:opacity-70 bg-[#f6f5f0] px-6 py-3 rounded-full">
                     <Plus size={14} /> Добавить шаг
                   </button>
                 </div>

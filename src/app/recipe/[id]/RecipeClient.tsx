@@ -10,6 +10,8 @@ import { getRecipeContentAction } from "../../actions/getRecipeContent";
 import { createPurchaseAction } from "../../actions/createPurchase";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import TimerButton from "../../../components/TimerButton";
+
 
 export default function RecipeClient({ initialRecipe, recipeId }: { initialRecipe: any, recipeId: string }) {
   const { data: session } = useSession();
@@ -149,19 +151,21 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             </motion.div>
           </div>
 
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="w-full lg:w-[400px] aspect-[4/5] relative rounded-[3rem] overflow-hidden shadow-2xl shadow-black/5 border border-[#f1f0e9]"
-          >
-            <Image 
-              src={recipe.imageUrl || "/scallop.png"}
-              alt={recipe.title}
-              fill
-              className="object-cover"
-            />
-          </motion.div>
+          {recipe.imageUrl && !['/placeholder.jpg', '/scallop.png'].includes(recipe.imageUrl) && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="w-full lg:w-[400px] aspect-[4/5] relative rounded-[3rem] overflow-hidden shadow-2xl shadow-black/5 border border-[#f1f0e9]"
+            >
+              <Image 
+                src={recipe.imageUrl}
+                alt={recipe.title}
+                fill
+                className="object-cover"
+              />
+            </motion.div>
+          )}
         </div>
       </section>
 
@@ -228,13 +232,15 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
               </div>
             </div>
           ) : purchased === false ? (
-            <div className="relative aspect-video rounded-[3rem] overflow-hidden group cursor-pointer" onClick={handlePurchase}>
-              <Image 
-                src={recipe.image_url || "/scallop.png"} 
-                alt="Locked Content" 
-                fill 
-                className="object-cover blur-md scale-110 opacity-50 grayscale transition-all duration-700 group-hover:scale-100 group-hover:blur-sm" 
-              />
+            <div className="relative aspect-video rounded-[3rem] overflow-hidden group cursor-pointer bg-[#2d2c2a]" onClick={handlePurchase}>
+              {recipe.imageUrl && !['/placeholder.jpg', '/scallop.png'].includes(recipe.imageUrl) && (
+                <Image 
+                  src={recipe.imageUrl} 
+                  alt="Locked Content" 
+                  fill 
+                  className="object-cover blur-md scale-110 opacity-40 grayscale transition-all duration-700 group-hover:scale-100 group-hover:blur-sm" 
+                />
+              )}
               <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8">
                  <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center mb-6">
                     <Lock size={32} className="text-white" />
@@ -263,9 +269,14 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                         {i + 1}
                       </span>
                       <div className="pt-4">
-                         <p className="text-lg md:text-xl font-light leading-relaxed text-[#2d2c2a]">
+                         <p className="text-lg md:text-xl font-light leading-relaxed text-[#2d2c2a] whitespace-pre-wrap">
                            {stepText}
                          </p>
+                         {step.timer && step.timer > 0 && (
+                           <div className="mt-6">
+                             <TimerButton label={`Таймер: ${Math.floor(step.timer / 60)} мин`} seconds={step.timer} />
+                           </div>
+                         )}
                       </div>
                     </div>
                     
