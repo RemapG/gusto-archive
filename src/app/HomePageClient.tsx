@@ -55,20 +55,20 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-muted-foreground/30 font-sans flex flex-col">
       {/* Header */}
-      <header className="px-8 py-8 md:px-16 w-full mx-auto flex justify-between items-center bg-background z-50">
-        <Link href="/" className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-          <ChefHat size={28} className="text-foreground" />
-          <span className="font-serif italic text-2xl tracking-wide">Архив Gusto</span>
+      <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-background z-50">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+          <ChefHat size={24} className="text-foreground" />
+          <span className="font-serif italic text-xl md:text-2xl tracking-wide">Gusto</span>
         </Link>
         
-        <div className="flex items-center text-xs uppercase tracking-widest font-medium text-muted-foreground gap-6">
-          <Link href="/cabinet" className="flex items-center gap-2 hover:text-foreground transition-colors">
+        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-3 md:gap-6">
+          <Link href="/cabinet" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
             <User size={14} />
-            Кабинет
+            <span className="hidden xs:inline">Кабинет</span>
           </Link>
           
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="flex flex-col items-end">
                 <span className="hidden sm:block text-[10px] lowercase opacity-50">{user.email?.split('@')[0]}</span>
                 {role === 'admin' && (
@@ -77,10 +77,10 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
               </div>
               <button 
                 onClick={handleLogout} 
-                className="flex items-center gap-2 bg-[#42403a] text-white px-4 py-2 rounded-full hover:bg-black transition-colors"
+                className="flex items-center gap-2 bg-[#42403a] text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-black transition-colors"
               >
                 <LogOut size={14} />
-                Выйти
+                <span className="hidden xs:inline">Выйти</span>
               </button>
             </div>
           ) : (
@@ -92,16 +92,16 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
       </header>
 
       {/* Main Content */}
-      <section className="flex-1 px-8 md:px-16 py-12 w-full max-w-[1400px] mx-auto">
-        <div className="flex flex-col md:flex-row md:justify-between items-start md:items-end mb-16 gap-8">
+      <section className="flex-1 px-6 md:px-16 py-8 md:py-12 w-full max-w-[1400px] mx-auto">
+        <div className="flex flex-col md:flex-row md:justify-between items-start md:items-end mb-12 md:mb-16 gap-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
             className="max-w-2xl"
           >
-            <h1 className="font-serif italic text-6xl md:text-8xl leading-[1.1] mb-8 text-foreground tracking-tight">
-              Рекомендуемые <br/>рецепты
+            <h1 className="font-serif italic text-5xl md:text-8xl leading-[1.1] mb-6 md:mb-8 text-foreground tracking-tight">
+              Рекомендуемые <br className="hidden md:block"/>рецепты
             </h1>
             <p className="text-xs uppercase tracking-[0.2em] leading-loose text-muted-foreground font-medium max-w-sm">
               КУРАТОРСКИЕ КУЛИНАРНЫЕ ВПЕЧАТЛЕНИЯ ОТ ЛУЧШИХ ШЕФ-ПОВАРОВ, МГНОВЕННО РАЗБЛОКИРОВАННЫЕ ДЛЯ ВАШЕЙ КУХНИ.
