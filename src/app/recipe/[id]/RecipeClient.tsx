@@ -20,6 +20,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
   const [content, setContent] = useState<any>(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [purchased, setPurchased] = useState<boolean | null>(null); // null = checking, true = yes, false = no
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null); // null = checking, true = yes, false = no
   const [isDeleting, setIsDeleting] = useState(false);
 
   const role = (session?.user as any)?.role || "user";
@@ -29,6 +30,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
       if (!session) {
         setLoadingContent(false);
         setPurchased(false);
+        setHasAccess(false);
         return;
       }
 
@@ -39,12 +41,15 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
         if (result.success) {
           setContent(result.content);
           setPurchased(result.purchased ?? false);
+          setHasAccess(result.hasAccess ?? false);
         } else {
           setPurchased(false);
+          setHasAccess(false);
         }
       } catch (err) {
         console.error("Error loading recipe contents:", err);
         setPurchased(false);
+        setHasAccess(false);
       } finally {
         setLoadingContent(false);
       }
@@ -65,6 +70,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
         if (contentResult.success) {
           setContent(contentResult.content);
           setPurchased(true);
+          setHasAccess(true);
         }
       } else {
         alert("Ошибка при покупке: " + result.error);
@@ -98,8 +104,8 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
       <header className="px-4 py-4 md:px-16 md:py-8 w-full flex justify-between items-center bg-[#fcfcf9]/80 backdrop-blur-md sticky top-0 z-50 border-b border-[#f1f0e9]">
         <Link href="/" className="inline-flex items-center text-[10px] uppercase tracking-widest text-[#8a8883] hover:text-[#2d2c2a] transition-colors font-semibold">
           <ArrowLeft size={16} className="mr-2" />
-          <span className="hidden sm:inline">Архив Gusto</span>
-          <span className="sm:hidden">Gusto</span>
+          <span className="hidden sm:inline">В гостях у Лидии</span>
+          <span className="sm:hidden">Лидия</span>
         </Link>
 
         {role === 'admin' && (
@@ -180,13 +186,13 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
               Ингредиенты
             </h3>
             
-            {loadingContent || purchased === null ? (
+            {loadingContent || hasAccess === null ? (
               <div className="space-y-4 animate-pulse">
                 {[1,2,3,4,5].map(i => (
                   <div key={i} className="h-8 bg-[#f1f0e9] rounded w-full" />
                 ))}
               </div>
-            ) : purchased === false ? (
+            ) : hasAccess === false ? (
               <div className="bg-[#f6f5f0] p-10 rounded-[2rem] border border-[#f1f0e9]">
                  <Lock className="text-[#8a8883] mb-6" size={24} />
                  <p className="text-xs font-medium uppercase tracking-widest leading-loose text-[#8a8883] mb-8">
@@ -196,22 +202,38 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                   onClick={handlePurchase}
                   className="w-full bg-[#2d2c2a] text-white hover:bg-black transition-all py-5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full shadow-xl shadow-black/5 active:scale-95"
                 >
-                  Разблокировать
+                  Разблокировать за {recipe.price} ₽
                 </button>
               </div>
             ) : (
-              <motion.ul 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-6"
-              >
-                {content?.ingredients?.map((ing: string, i: number) => (
-                  <li key={i} className="text-sm font-medium border-b border-[#f1f0e9] pb-4 flex justify-between items-center group hover:border-[#2d2c2a] transition-colors">
-                    <span className="text-[#2d2c2a] group-hover:translate-x-1 transition-transform">{ing}</span>
-                    <CheckCircle2 size={14} className="text-[#e2e0d8] group-hover:text-green-600 transition-colors" />
-                  </li>
-                ))}
-              </motion.ul>
+              <div className="space-y-6">
+                <motion.ul 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6"
+                >
+                  {content?.ingredients?.map((ing: string, i: number) => (
+                    <li key={i} className="text-sm font-medium border-b border-[#f1f0e9] pb-4 flex justify-between items-center group hover:border-[#2d2c2a] transition-colors">
+                      <span className="text-[#2d2c2a] group-hover:translate-x-1 transition-transform">{ing}</span>
+                      <CheckCircle2 size={14} className="text-[#e2e0d8] group-hover:text-green-600 transition-colors" />
+                    </li>
+                  ))}
+                </motion.ul>
+
+                {purchased === false && role !== 'admin' && (
+                  <div className="mt-8 p-6 rounded-2xl bg-[#f6f5f0] border border-[#e2e0d8]">
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-[#8a8883] mb-3 leading-relaxed">
+                      Доступ открыт по подписке Premium.
+                    </p>
+                    <button 
+                      onClick={handlePurchase}
+                      className="w-full bg-transparent border border-[#2d2c2a] text-[#2d2c2a] hover:bg-[#2d2c2a] hover:text-white transition-all py-3 text-[9px] font-bold uppercase tracking-widest rounded-full"
+                    >
+                      Купить навсегда за {recipe.price} ₽
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </aside>
@@ -223,7 +245,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             Процесс приготовления
           </h3>
 
-          {loadingContent || purchased === null ? (
+          {loadingContent || hasAccess === null ? (
             <div className="space-y-12 animate-pulse">
               <div className="h-64 bg-[#f1f0e9] rounded-[3rem] w-full" />
               <div className="space-y-4">
@@ -231,7 +253,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                 <div className="h-4 bg-[#f1f0e9] rounded w-1/2" />
               </div>
             </div>
-          ) : purchased === false ? (
+          ) : hasAccess === false ? (
             <div className="relative aspect-video rounded-[3rem] overflow-hidden group cursor-pointer bg-[#2d2c2a]" onClick={handlePurchase}>
               {recipe.imageUrl && !['/placeholder.jpg', '/scallop.png'].includes(recipe.imageUrl) && (
                 <Image 
@@ -246,7 +268,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                     <Lock size={32} className="text-white" />
                  </div>
                  <h4 className="text-2xl font-serif italic text-white mb-2">Архив закрыт</h4>
-                 <p className="text-[10px] uppercase tracking-widest text-white/60 font-medium">Купите доступ для просмотра техкарты</p>
+                 <p className="text-[10px] uppercase tracking-widest text-white/60 font-medium">Купите доступ или оформите подписку для просмотра техкарты</p>
               </div>
             </div>
           ) : (

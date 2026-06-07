@@ -76,7 +76,7 @@ export default function AuthPage() {
             <ChefHat size={32} className="text-[#f6f5f0]" />
           </div>
           <div>
-            <h1 className="font-serif italic text-4xl tracking-tight text-[#2d2c2a]">Gusto</h1>
+            <h1 className="font-serif italic text-4xl tracking-tight text-[#2d2c2a]">В гостях у Лидии</h1>
             <p className="text-[10px] uppercase tracking-[0.4em] text-[#8a8883] font-bold mt-1">Архив Техкарт</p>
           </div>
         </Link>
@@ -106,7 +106,7 @@ export default function AuthPage() {
               </div>
               <input
                 type="email"
-                placeholder="chef@gusto.com"
+                placeholder="chef@lidia.ru"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-[#fcfcf9] border border-[#f1f0e9] rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-[#2d2c2a] focus:ring-4 focus:ring-[#2d2c2a]/5 transition-all placeholder:text-[#c4c2ba]"
@@ -170,7 +170,7 @@ export default function AuthPage() {
         transition={{ delay: 0.3 }}
         className="mt-12 text-[10px] uppercase tracking-widest text-[#8a8883] font-medium"
       >
-        Gusto Culinary Boutique © 2026
+        В гостях у Лидии © 2026
       </motion.p>
     </main>
   );

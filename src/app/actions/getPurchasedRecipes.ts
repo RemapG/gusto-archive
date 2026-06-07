@@ -36,7 +36,17 @@ export async function getPurchasedRecipesAction() {
       image_url: p.recipe.imageUrl
     }));
 
-    return { success: true, recipes };
+    // Fetch user subscription info
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionExpiresAt: true }
+    });
+
+    return { 
+      success: true, 
+      recipes, 
+      subscriptionExpiresAt: dbUser?.subscriptionExpiresAt ? dbUser.subscriptionExpiresAt.toISOString() : null 
+    };
   } catch (err) {
     console.error("Error in getPurchasedRecipesAction:", err);
     return { success: false, error: "Server Error" };

@@ -13,6 +13,7 @@ export async function createRecipeAction(
     description: string;
     price: number;
     image_url: string;
+    available_in_subscription?: boolean;
     ingredients: string[];
     steps: { text: string; image_url: string | null }[];
   }
@@ -32,6 +33,7 @@ export async function createRecipeAction(
         description: recipeData.description,
         price: recipeData.price,
         imageUrl: recipeData.image_url,
+        availableInSubscription: recipeData.available_in_subscription !== false,
         contents: {
           create: {
             ingredients: recipeData.ingredients.filter(i => i.trim() !== ""),

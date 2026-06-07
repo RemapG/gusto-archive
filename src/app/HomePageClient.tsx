@@ -32,10 +32,13 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
       <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-background z-50">
         <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
           <ChefHat size={24} className="text-foreground" />
-          <span className="font-serif italic text-xl md:text-2xl tracking-wide">Gusto</span>
+          <span className="font-serif italic text-xl md:text-2xl tracking-wide">В гостях у Лидии</span>
         </Link>
         
         <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-3 md:gap-6">
+          <Link href="/about" className="hover:text-foreground transition-colors">
+            Обо мне
+          </Link>
           <Link href="/cabinet" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
             <User size={14} />
             <span className="hidden xs:inline">Кабинет</span>
@@ -180,7 +183,7 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
           <div className="col-span-1">
             <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity mb-8">
               <ChefHat size={20} className="text-foreground" />
-              <span className="font-serif italic text-lg">Gusto</span>
+              <span className="font-serif italic text-lg">В гостях у Лидии</span>
             </Link>
             <p className="text-[10px] uppercase tracking-widest leading-loose text-muted-foreground max-w-xs font-medium">
               ИСКЛЮЧИТЕЛЬНЫЕ КУЛИНАРНЫЕ<br/>ТЕХНИЧЕСКИЕ ФАЙЛЫ ДЛЯ СОВРЕМЕННОГО<br/>ПРИГОТОВЛЕНИЯ ЕДЫ.
@@ -190,6 +193,7 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
           <div className="col-span-1 flex flex-col gap-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             <span className="text-[10px] text-border mb-2 text-foreground">НАВИГАЦИЯ</span>
             <Link href="/" className="hover:text-foreground transition-colors">Каталог</Link>
+            <Link href="/about" className="hover:text-foreground transition-colors">Обо мне</Link>
             <Link href="/cabinet" className="hover:text-foreground transition-colors">Кабинет</Link>
           </div>
 

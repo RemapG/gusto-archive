@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Архив Gusto",
+  title: "В гостях у Лидии",
   description: "Исключительные кулинарные впечатления",
 };
 

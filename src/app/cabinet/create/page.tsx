@@ -25,6 +25,7 @@ export default function CreateRecipePage() {
   const [price, setPrice] = useState("");
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [availableInSubscription, setAvailableInSubscription] = useState(true);
 
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([""]);
@@ -112,6 +113,7 @@ export default function CreateRecipePage() {
         description,
         price: parseFloat(price) || 0,
         image_url: mainImageUrl,
+        available_in_subscription: availableInSubscription,
         ingredients,
         steps: finalSteps
       });
@@ -203,6 +205,19 @@ export default function CreateRecipePage() {
                       <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-2 font-medium">Цена (₽)</label>
                       <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-light" placeholder="1000" />
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-4">
+                    <input 
+                      type="checkbox" 
+                      id="subscriptionToggle"
+                      checked={availableInSubscription} 
+                      onChange={e => setAvailableInSubscription(e.target.checked)} 
+                      className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                    />
+                    <label htmlFor="subscriptionToggle" className="text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
+                      Доступен по подписке (пользователи с активной подпиской получат доступ)
+                    </label>
                   </div>
                 </div>
 
