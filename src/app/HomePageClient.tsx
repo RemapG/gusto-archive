@@ -7,14 +7,35 @@ import Link from "next/link";
 import { ArrowRight, ShoppingBag, ChefHat, User, LogOut, Plus, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { getUnreadMessagesCountAction } from "./actions/chat";
 
 export default function HomePageClient({ initialRecipes }: { initialRecipes: any[] }) {
   const { data: session } = useSession();
   const [recipes, setRecipes] = useState<any[]>(initialRecipes);
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
 
   const user = session?.user;
   const role = (session?.user as any)?.role || "user";
+
+  useEffect(() => {
+    if (!user) return;
+
+    const checkUnread = async () => {
+      try {
+        const res = await getUnreadMessagesCountAction();
+        if (res.success && typeof res.count === 'number') {
+          setUnreadCount(res.count);
+        }
+      } catch (err) {
+        console.error("Error checking unread messages:", err);
+      }
+    };
+
+    checkUnread();
+    const interval = setInterval(checkUnread, 2000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -35,33 +56,50 @@ export default function HomePageClient({ initialRecipes }: { initialRecipes: any
           <span className="font-serif italic text-xl md:text-2xl tracking-wide">В гостях у Лидии</span>
         </Link>
         
-        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-3 md:gap-6">
+        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-4 md:gap-6">
           <Link href="/about" className="hover:text-foreground transition-colors">
             Обо мне
           </Link>
-          <Link href="/cabinet" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-            <User size={14} />
-            <span className="hidden xs:inline">Кабинет</span>
-          </Link>
           
           {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <span className="hidden sm:block text-[10px] lowercase opacity-50">{user.email?.split('@')[0]}</span>
-                {role === 'admin' && (
-                  <span className="text-[9px] font-bold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100 mt-0.5">ADMIN</span>
-                )}
-              </div>
+            <div className="flex items-center gap-3 md:gap-4">
+              {/* User profile button that links to cabinet */}
+              <Link 
+                href="/cabinet" 
+                className="flex items-center gap-2.5 bg-white border border-[#e2e0d8] hover:border-[#2d2c2a] hover:bg-[#fcfcf9] transition-all px-3 py-1 rounded-full shadow-sm relative group cursor-pointer normal-case tracking-normal"
+              >
+                {/* Avatar with unread indicator */}
+                <div className="w-8 h-8 rounded-full bg-[#2d2c2a] text-white flex items-center justify-center shrink-0 relative">
+                  <User size={14} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#ff4d4f] rounded-full border border-white animate-pulse" />
+                  )}
+                </div>
+
+                {/* Name & Role */}
+                <div className="flex flex-col pr-1 text-left">
+                  <span className="text-[11px] font-bold text-[#2d2c2a] lowercase tracking-normal leading-tight">
+                    {user.email?.split('@')[0]}
+                  </span>
+                  {role === 'admin' ? (
+                    <span className="text-[8px] font-semibold text-yellow-600 tracking-wider uppercase leading-none mt-0.5">Администратор</span>
+                  ) : (
+                    <span className="text-[8px] text-[#8a8883] font-semibold tracking-wider uppercase leading-none mt-0.5">Кабинет</span>
+                  )}
+                </div>
+              </Link>
+
+              {/* Logout button */}
               <button 
                 onClick={handleLogout} 
-                className="flex items-center gap-2 bg-[#42403a] text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-black transition-colors"
+                className="w-9 h-9 bg-[#42403a] hover:bg-black text-white rounded-full transition-colors flex items-center justify-center shrink-0 shadow-sm"
+                title="Выйти"
               >
                 <LogOut size={14} />
-                <span className="hidden xs:inline">Выйти</span>
               </button>
             </div>
           ) : (
-            <Link href="/auth" className="flex items-center gap-2 hover:text-foreground transition-colors">
+            <Link href="/auth" className="hover:text-foreground transition-colors">
               Войти
             </Link>
           )}

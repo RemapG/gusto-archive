@@ -10,6 +10,8 @@ import { useSession, signOut } from "next-auth/react";
 import { getPurchasedRecipesAction } from "../actions/getPurchasedRecipes";
 import { subscribeAction, cancelSubscriptionAction } from "../actions/subscription";
 import { getAdminStatsAction, grantSubscriptionAction } from "../actions/admin";
+import UserChat from "@/components/chat/UserChat";
+import AdminChat from "@/components/chat/AdminChat";
 
 export default function CabinetPage() {
   const { data: session, status } = useSession();
@@ -208,45 +210,62 @@ export default function CabinetPage() {
           </div>
         </div>
 
-        <h2 className="text-sm font-medium uppercase tracking-widest border-b border-[#e2e0d8] pb-4 mb-8 text-[#8a8883]">
-          Моя коллекция
-        </h2>
+        {role !== "admin" && (
+          <>
+            <h2 className="text-sm font-medium uppercase tracking-widest border-b border-[#e2e0d8] pb-4 mb-8 text-[#8a8883]">
+              Моя коллекция
+            </h2>
 
-        {purchasedRecipes.length === 0 ? (
-          <div className="w-full py-24 rounded-[2.5rem] border border-dashed border-[#e2e0d8] flex flex-col items-center justify-center text-center">
-            <ChefHat size={40} className="text-[#e2e0d8] mb-6" strokeWidth={1.5} />
-            <h3 className="font-serif italic text-2xl mb-4">Коллекция пустует</h3>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium max-w-xs">
-              ВЫ ПОКА НЕ РАЗБЛОКИРОВАЛИ НИ ОДНОГО РЕЦЕПТА ИЗ АРХИВА.
+            {purchasedRecipes.length === 0 ? (
+              <div className="w-full py-24 rounded-[2.5rem] border border-dashed border-[#e2e0d8] flex flex-col items-center justify-center text-center">
+                <ChefHat size={40} className="text-[#e2e0d8] mb-6" strokeWidth={1.5} />
+                <h3 className="font-serif italic text-2xl mb-4">Коллекция пустует</h3>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium max-w-xs">
+                  ВЫ ПОКА НЕ РАЗБЛОКИРОВАЛИ НИ ОДНОГО РЕЦЕПТА ИЗ АРХИВА.
+                </p>
+                <Link href="/" className="mt-8 text-xs underline underline-offset-4 font-medium uppercase tracking-widest hover:text-[#8a8883] transition-colors">Перейти в каталог</Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {purchasedRecipes.map((recipe, i) => (
+                  <motion.div 
+                    key={recipe.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="group relative"
+                  >
+                    <Link href={`/recipe/${recipe.id}`} className="block">
+                      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#e8e6df] mb-4">
+                        <Image
+                          src={recipe.image_url || "/scallop.png"}
+                          alt={recipe.title}
+                          fill
+                          className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-serif italic text-xl mb-1 text-[#2d2c2a] group-hover:opacity-70 transition-opacity">{recipe.title}</h3>
+                        <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">{recipe.category}</p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Чат поддержки для обычных пользователей */}
+        {role !== "admin" && (
+          <div className="mt-24 pt-12 border-t border-[#e2e0d8]">
+            <h2 className="font-serif italic text-4xl mb-2">Задать вопрос Лидии</h2>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium mb-8">
+              Вы можете спросить Лидию о рецептах, подписке или оставить отзыв
             </p>
-            <Link href="/" className="mt-8 text-xs underline underline-offset-4 font-medium uppercase tracking-widest hover:text-[#8a8883] transition-colors">Перейти в каталог</Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {purchasedRecipes.map((recipe, i) => (
-              <motion.div 
-                key={recipe.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="group relative"
-              >
-                <Link href={`/recipe/${recipe.id}`} className="block">
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#e8e6df] mb-4">
-                    <Image
-                      src={recipe.image_url || "/scallop.png"}
-                      alt={recipe.title}
-                      fill
-                      className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-serif italic text-xl mb-1 text-[#2d2c2a] group-hover:opacity-70 transition-opacity">{recipe.title}</h3>
-                    <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">{recipe.category}</p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+            <div className="w-full">
+              <UserChat />
+            </div>
           </div>
         )}
 
@@ -357,6 +376,15 @@ export default function CabinetPage() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+
+                {/* Чат с пользователями */}
+                <div className="mt-16 pt-12 border-t border-[#e2e0d8]">
+                  <h3 className="font-serif italic text-3xl mb-2">Чат поддержки</h3>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium mb-8">
+                    Отвечайте на вопросы пользователей в реальном времени
+                  </p>
+                  <AdminChat />
                 </div>
               </div>
             )}

@@ -44,6 +44,8 @@ model User {
   accounts      Account[]
   purchases     Purchase[]
   sessions      Session[]
+  chatMessages  ChatMessage[] @relation("UserChats")
+  sentMessages  ChatMessage[] @relation("SentMessages")
 }
 
 model VerificationToken {
@@ -86,4 +88,15 @@ model Purchase {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, recipeId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  senderId  String
+  text      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation("UserChats", fields: [userId], references: [id], onDelete: Cascade)
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
