@@ -160,7 +160,7 @@ export default function UserChat() {
           onChange={(e) => setInputText(e.target.value)}
           onFocus={() => setHasNewMessage(false)}
           placeholder="Напишите сообщение..."
-          className="flex-1 px-4 py-3 rounded-full bg-[#f6f5f0] border-0 text-xs focus:ring-1 focus:ring-[#2d2c2a] outline-none text-[#2d2c2a]"
+          className="flex-1 px-4 py-3 rounded-full bg-[#f6f5f0] border-0 text-base md:text-xs focus:ring-1 focus:ring-[#2d2c2a] outline-none text-[#2d2c2a]"
           disabled={sending}
         />
         <button
