@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from "react";
-import { Send, RefreshCw, MessageSquare, User } from "lucide-react";
+import { Send, RefreshCw, MessageSquare, User, ArrowLeft } from "lucide-react";
 import { getAdminChatsAction, getChatMessagesAction, sendChatMessageAction } from "@/app/actions/chat";
 
 export default function AdminChat() {
@@ -104,7 +104,7 @@ export default function AdminChat() {
   return (
     <div className="bg-white border border-[#e2e0d8] rounded-[2rem] overflow-hidden shadow-sm flex h-[600px]">
       {/* Left panel - User chats list */}
-      <div className="w-1/3 border-r border-[#f1f0e9] flex flex-col bg-[#fcfcf9]">
+      <div className={`w-full md:w-1/3 border-r border-[#f1f0e9] flex flex-col bg-[#fcfcf9] ${selectedUserId ? "hidden md:flex" : "flex"}`}>
         <div className="px-6 py-5 border-b border-[#f1f0e9] flex justify-between items-center bg-white">
           <h3 className="text-xs uppercase tracking-widest font-bold text-[#2d2c2a]">
             Вопросы пользователей
@@ -197,21 +197,29 @@ export default function AdminChat() {
       </div>
 
       {/* Right panel - Current conversation thread */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className={`flex-1 flex flex-col bg-white ${selectedUserId ? "flex" : "hidden md:flex"}`}>
         {selectedUserId ? (
           <>
             {/* Active chat header */}
-            <div className="px-8 py-5 border-b border-[#f1f0e9] flex justify-between items-center bg-[#fcfcf9]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#f6f5f0] border border-[#e2e0d8] flex items-center justify-center text-[#2d2c2a]">
+            <div className="px-6 py-4 md:px-8 md:py-5 border-b border-[#f1f0e9] flex justify-between items-center bg-[#fcfcf9]">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Back button visible only on mobile */}
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className="md:hidden flex items-center justify-center p-1.5 -ml-1 text-[#8a8883] hover:text-[#2d2c2a] transition-colors"
+                  title="Назад к списку"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <div className="w-8 h-8 rounded-full bg-[#f6f5f0] border border-[#e2e0d8] flex items-center justify-center text-[#2d2c2a] shrink-0">
                   <User size={14} />
                 </div>
-                <div>
-                  <h3 className="text-xs uppercase tracking-widest font-bold text-[#2d2c2a]">
+                <div className="min-w-0">
+                  <h3 className="text-xs uppercase tracking-widest font-bold text-[#2d2c2a] truncate">
                     {activeChat?.userName}
                   </h3>
-                  <p className="text-[10px] text-[#8a8883] font-light">
-                    Переписка с пользователем
+                  <p className="text-[10px] text-[#8a8883] font-light truncate">
+                    {activeChat?.userEmail || "Переписка с пользователем"}
                   </p>
                 </div>
               </div>
