@@ -44,14 +44,36 @@ export async function getAdminStatsAction() {
     // General counts
     const totalRecipes = await prisma.recipe.count();
     const totalPurchases = await prisma.purchase.count();
+    const totalCourses = await prisma.course.count();
+    const totalCoursePurchases = await prisma.coursePurchase.count();
     const activeSubscriptions = users.filter(u => u.subscriptionExpiresAt && new Date(u.subscriptionExpiresAt) > new Date()).length;
+
+    // Fetch all courses for admin dashboard list
+    const courses = await prisma.course.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        lessons: { select: { id: true } }
+      }
+    });
+
+    const formattedCourses = courses.map((c: any) => ({
+      id: c.id,
+      title: c.title,
+      price: Number(c.price),
+      slug: c.slug,
+      imageUrl: c.imageUrl,
+      lessonsCount: c.lessons.length
+    }));
 
     return {
       success: true,
       users: formattedUsers,
+      coursesList: formattedCourses,
       stats: {
         totalRecipes,
         totalPurchases,
+        totalCourses,
+        totalCoursePurchases,
         activeSubscriptions
       }
     };

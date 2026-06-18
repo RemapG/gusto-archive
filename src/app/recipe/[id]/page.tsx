@@ -5,11 +5,23 @@ export const revalidate = 0;
 
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = await params;
+  const idOrSlug = unwrappedParams.id;
   
-  // Fetch the recipe metadata using Prisma
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: unwrappedParams.id }
-  });
+  // Safe UUID format check (database will error if we search non-uuid string in UUID column)
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
+  let recipe = null;
+  if (isUuid) {
+    recipe = await prisma.recipe.findUnique({
+      where: { id: idOrSlug }
+    });
+  }
+
+  if (!recipe) {
+    recipe = await prisma.recipe.findUnique({
+      where: { slug: idOrSlug }
+    });
+  }
 
   if (!recipe) {
     return (
@@ -26,8 +38,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     description: recipe.description,
     price: Number(recipe.price),
     image_url: recipe.imageUrl,
+    video_url: recipe.videoUrl || "",
     created_at: recipe.createdAt.toISOString()
   };
 
-  return <RecipeClient initialRecipe={formattedRecipe} recipeId={unwrappedParams.id} />;
+  return <RecipeClient initialRecipe={formattedRecipe} recipeId={recipe.id} />;
 }

@@ -10,12 +10,15 @@ import { useSession, signOut } from "next-auth/react";
 import { getPurchasedRecipesAction } from "../actions/getPurchasedRecipes";
 import { subscribeAction, cancelSubscriptionAction } from "../actions/subscription";
 import { getAdminStatsAction, grantSubscriptionAction } from "../actions/admin";
+import { deleteCourseAction } from "../actions/deleteCourse";
 import UserChat from "@/components/chat/UserChat";
 import AdminChat from "@/components/chat/AdminChat";
 
 export default function CabinetPage() {
   const { data: session, status } = useSession();
   const [purchasedRecipes, setPurchasedRecipes] = useState<any[]>([]);
+  const [purchasedCourses, setPurchasedCourses] = useState<any[]>([]);
+  const [cabinetTab, setCabinetTab] = useState<"recipes" | "courses">("recipes");
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [submittingSubscription, setSubmittingSubscription] = useState(false);
   const [adminData, setAdminData] = useState<any>(null);
@@ -37,6 +40,7 @@ export default function CabinetPage() {
         const result = await getPurchasedRecipesAction();
         if (result.success) {
           setPurchasedRecipes(result.recipes || []);
+          setPurchasedCourses(result.courses || []);
           setSubscriptionExpiresAt(result.subscriptionExpiresAt || null);
         }
 
@@ -212,46 +216,105 @@ export default function CabinetPage() {
 
         {role !== "admin" && (
           <>
-            <h2 className="text-sm font-medium uppercase tracking-widest border-b border-[#e2e0d8] pb-4 mb-8 text-[#8a8883]">
-              Моя коллекция
-            </h2>
+            <div className="flex border-b border-[#e2e0d8] pb-4 mb-8 gap-8">
+              <button 
+                onClick={() => setCabinetTab("recipes")}
+                className={`text-sm font-medium uppercase tracking-widest transition-all border-b-2 pb-2 -mb-5 cursor-pointer ${
+                  cabinetTab === "recipes" 
+                    ? "border-[#2d2c2a] text-[#2d2c2a] border-b-2" 
+                    : "border-transparent text-[#8a8883] hover:text-[#2d2c2a]"
+                }`}
+              >
+                Мои рецепты ({purchasedRecipes.length})
+              </button>
+              <button 
+                onClick={() => setCabinetTab("courses")}
+                className={`text-sm font-medium uppercase tracking-widest transition-all border-b-2 pb-2 -mb-5 cursor-pointer ${
+                  cabinetTab === "courses" 
+                    ? "border-[#2d2c2a] text-[#2d2c2a] border-b-2" 
+                    : "border-transparent text-[#8a8883] hover:text-[#2d2c2a]"
+                }`}
+              >
+                Мои курсы ({purchasedCourses.length})
+              </button>
+            </div>
 
-            {purchasedRecipes.length === 0 ? (
-              <div className="w-full py-24 rounded-[2.5rem] border border-dashed border-[#e2e0d8] flex flex-col items-center justify-center text-center">
-                <ChefHat size={40} className="text-[#e2e0d8] mb-6" strokeWidth={1.5} />
-                <h3 className="font-serif italic text-2xl mb-4">Коллекция пустует</h3>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium max-w-xs">
-                  ВЫ ПОКА НЕ РАЗБЛОКИРОВАЛИ НИ ОДНОГО РЕЦЕПТА ИЗ АРХИВА.
-                </p>
-                <Link href="/" className="mt-8 text-xs underline underline-offset-4 font-medium uppercase tracking-widest hover:text-[#8a8883] transition-colors">Перейти в каталог</Link>
-              </div>
+            {cabinetTab === "recipes" ? (
+              purchasedRecipes.length === 0 ? (
+                <div className="w-full py-24 rounded-[2.5rem] border border-dashed border-[#e2e0d8] flex flex-col items-center justify-center text-center">
+                  <ChefHat size={40} className="text-[#e2e0d8] mb-6" strokeWidth={1.5} />
+                  <h3 className="font-serif italic text-2xl mb-4">Коллекция пустует</h3>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium max-w-xs">
+                    ВЫ ПОКА НЕ РАЗБЛОКИРОВАЛИ НИ ОДНОГО РЕЦЕПТА ИЗ АРХИВА.
+                  </p>
+                  <Link href="/" className="mt-8 text-xs underline underline-offset-4 font-medium uppercase tracking-widest hover:text-[#8a8883] transition-colors">Перейти в каталог</Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {purchasedRecipes.map((recipe, i) => (
+                    <motion.div 
+                      key={recipe.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="group relative"
+                    >
+                      <Link href={`/recipe/${recipe.slug || recipe.id}`} className="block">
+                        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#e8e6df] mb-4">
+                          <Image
+                            src={recipe.image_url || "/scallop.png"}
+                            alt={recipe.title}
+                            fill
+                            className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-serif italic text-xl mb-1 text-[#2d2c2a] group-hover:opacity-70 transition-opacity">{recipe.title}</h3>
+                          <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">{recipe.category ? recipe.category.split(', ').join(' • ') : ''}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {purchasedRecipes.map((recipe, i) => (
-                  <motion.div 
-                    key={recipe.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="group relative"
-                  >
-                    <Link href={`/recipe/${recipe.id}`} className="block">
-                      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#e8e6df] mb-4">
-                        <Image
-                          src={recipe.image_url || "/scallop.png"}
-                          alt={recipe.title}
-                          fill
-                          className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-serif italic text-xl mb-1 text-[#2d2c2a] group-hover:opacity-70 transition-opacity">{recipe.title}</h3>
-                        <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">{recipe.category}</p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
+              purchasedCourses.length === 0 ? (
+                <div className="w-full py-24 rounded-[2.5rem] border border-dashed border-[#e2e0d8] flex flex-col items-center justify-center text-center">
+                  <ChefHat size={40} className="text-[#e2e0d8] mb-6" strokeWidth={1.5} />
+                  <h3 className="font-serif italic text-2xl mb-4">Нет купленных курсов</h3>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8883] font-medium max-w-xs">
+                    ВЫ ПОКА НЕ ПРИОБРЕЛИ НИ ОДНОГО ОБУЧАЮЩЕГО КУРСА.
+                  </p>
+                  <Link href="/" className="mt-8 text-xs underline underline-offset-4 font-medium uppercase tracking-widest hover:text-[#8a8883] transition-colors">Перейти в каталог</Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {purchasedCourses.map((course, i) => (
+                    <motion.div 
+                      key={course.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="group relative"
+                    >
+                      <Link href={`/course/${course.slug || course.id}`} className="block">
+                        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#e8e6df] mb-4">
+                          <Image
+                            src={course.image_url || "/scallop.png"}
+                            alt={course.title}
+                            fill
+                            className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-serif italic text-xl mb-1 text-[#2d2c2a] group-hover:opacity-70 transition-opacity">{course.title}</h3>
+                          <p className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">ОБУЧАЮЩИЙ КУРС • {course.lessons_count} {course.lessons_count === 1 ? 'УРОК' : (course.lessons_count > 1 && course.lessons_count < 5) ? 'УРОКА' : 'УРОКОВ'}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )
             )}
           </>
         )}
@@ -284,17 +347,25 @@ export default function CabinetPage() {
             ) : (
               <div className="space-y-12">
                 {/* Карточки статистики */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-6">
                   <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
                     <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Всего рецептов</span>
                     <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalRecipes}</span>
                   </div>
                   <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
-                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Всего прямых покупок</span>
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Покупки рецептов</span>
                     <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalPurchases}</span>
                   </div>
                   <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
-                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Активных подписок</span>
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Всего курсов</span>
+                    <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalCourses}</span>
+                  </div>
+                  <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Покупки курсов</span>
+                    <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalCoursePurchases}</span>
+                  </div>
+                  <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Подписки</span>
                     <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.activeSubscriptions}</span>
                   </div>
                 </div>
@@ -373,6 +444,77 @@ export default function CabinetPage() {
                             </tr>
                           );
                         })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Таблица курсов */}
+                <div className="bg-white rounded-[2rem] border border-[#e2e0d8] shadow-sm overflow-hidden mt-8">
+                  <div className="p-8 border-b border-[#f1f0e9] flex justify-between items-center">
+                    <h3 className="text-sm uppercase tracking-widest font-bold text-[#2d2c2a]">
+                      Обучающие курсы
+                    </h3>
+                    <Link 
+                      href="/cabinet/courses/create"
+                      className="bg-[#2d2c2a] text-white px-6 py-2.5 rounded-full text-[9px] font-medium uppercase tracking-widest hover:bg-black transition-colors"
+                    >
+                      Создать курс
+                    </Link>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#f1f0e9] text-[10px] uppercase tracking-wider text-[#8a8883]">
+                          <th className="py-4 px-8 font-semibold">Название</th>
+                          <th className="py-4 px-8 font-semibold">Слаг / ЧПУ</th>
+                          <th className="py-4 px-8 font-semibold">Уроки</th>
+                          <th className="py-4 px-8 font-semibold">Цена</th>
+                          <th className="py-4 px-8 font-semibold text-right">Действия</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#f1f0e9] text-xs font-medium text-[#2d2c2a]">
+                        {adminData.coursesList?.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-xs text-[#8a8883] font-light">Курсы не найдены.</td>
+                          </tr>
+                        ) : (
+                          adminData.coursesList?.map((course: any) => {
+                            const handleDeleteCourse = async () => {
+                              if (!confirm(`Вы уверены, что хотите удалить курс "${course.title}"?`)) return;
+                              const res = await deleteCourseAction(course.id);
+                              if (res.success) {
+                                alert("Курс успешно удален");
+                                router.refresh();
+                              } else {
+                                alert("Ошибка при удалении: " + res.error);
+                              }
+                            };
+
+                            return (
+                              <tr key={course.id} className="hover:bg-[#fcfcf9] transition-colors">
+                                <td className="py-5 px-8 font-serif italic text-sm">{course.title}</td>
+                                <td className="py-5 px-8 font-mono">{course.slug || "—"}</td>
+                                <td className="py-5 px-8">{course.lessonsCount}</td>
+                                <td className="py-5 px-8">{course.price} ₽</td>
+                                <td className="py-5 px-8 text-right space-x-4">
+                                  <Link 
+                                    href={`/cabinet/courses/edit/${course.id}`}
+                                    className="text-[9px] uppercase tracking-wider font-bold text-[#2d2c2a] hover:underline"
+                                  >
+                                    Редактировать
+                                  </Link>
+                                  <button
+                                    onClick={handleDeleteCourse}
+                                    className="text-[9px] uppercase tracking-wider font-bold text-red-500 hover:text-red-700 transition-colors"
+                                  >
+                                    Удалить
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>

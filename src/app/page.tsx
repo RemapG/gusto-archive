@@ -10,6 +10,16 @@ export default async function Home() {
     orderBy: { createdAt: 'asc' }
   });
 
+  // Fetch courses on the server side using Prisma!
+  const courses = await prisma.course.findMany({
+    orderBy: { createdAt: 'asc' },
+    include: {
+      lessons: {
+        select: { id: true }
+      }
+    }
+  });
+
   // Map to the format the client expects if necessary
   const formattedRecipes = recipes.map((r: any) => ({
     id: r.id,
@@ -18,8 +28,20 @@ export default async function Home() {
     description: r.description,
     price: Number(r.price),
     image_url: r.imageUrl,
+    slug: r.slug,
     created_at: r.createdAt.toISOString()
   }));
 
-  return <HomePageClient initialRecipes={formattedRecipes} />;
+  const formattedCourses = courses.map((c: any) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    price: Number(c.price),
+    image_url: c.imageUrl,
+    slug: c.slug,
+    lessons_count: c.lessons.length,
+    created_at: c.createdAt.toISOString()
+  }));
+
+  return <HomePageClient initialRecipes={formattedRecipes} initialCourses={formattedCourses} />;
 }

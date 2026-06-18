@@ -43,6 +43,7 @@ model User {
   subscriptionExpiresAt DateTime?
   accounts      Account[]
   purchases     Purchase[]
+  coursePurchases CoursePurchase[]
   sessions      Session[]
   chatMessages  ChatMessage[] @relation("UserChats")
   sentMessages  ChatMessage[] @relation("SentMessages")
@@ -63,11 +64,14 @@ model Recipe {
   category    String
   price       Decimal        @db.Decimal(10, 2)
   imageUrl    String?
+  videoUrl    String?
+  slug        String?        @unique
   availableInSubscription Boolean @default(true)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   purchases   Purchase[]
   contents    RecipeContent?
+  courses     RecipeInCourse[]
 }
 
 model RecipeContent {
@@ -99,4 +103,50 @@ model ChatMessage {
   createdAt DateTime @default(now())
   user      User     @relation("UserChats", fields: [userId], references: [id], onDelete: Cascade)
   sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Course {
+  id          String            @id @default(uuid())
+  title       String
+  description String?
+  imageUrl    String?
+  price       Decimal           @db.Decimal(10, 2)
+  slug        String?           @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  lessons     Lesson[]
+  purchases   CoursePurchase[]
+  recipes     RecipeInCourse[]
+}
+
+model Lesson {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  videoUrl    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model CoursePurchase {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model RecipeInCourse {
+  courseId  String
+  recipeId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, recipeId])
 }

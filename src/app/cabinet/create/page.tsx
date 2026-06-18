@@ -10,6 +10,19 @@ import { createRecipeAction } from "../../actions/createRecipe";
 import { uploadToS3Action } from "../../actions/uploadToS3";
 import { useSession } from "next-auth/react";
 
+const DISH_CATEGORIES = [
+  "Закуски холодные",
+  "Закуски горячие",
+  "Салаты",
+  "Супы",
+  "Основные блюда",
+  "Десерты",
+  "Соусы",
+  "Заготовки",
+  "Курсы",
+  "Гарниры"
+];
+
 export default function CreateRecipePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -21,17 +34,18 @@ export default function CreateRecipePage() {
 
   // Form Data
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Haute Cuisine");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(["Основные блюда"]);
   const [price, setPrice] = useState("");
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [availableInSubscription, setAvailableInSubscription] = useState(true);
+  const [videoUrl, setVideoUrl] = useState("");
 
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([""]);
 
   const [steps, setRecipeSteps] = useState<any[]>([
-    { text: "", image: null, imagePreview: null, timerMinutes: "" }
+    { text: "", image: null, imagePreview: null, timerMinutes: "", videoUrl: "" }
   ]);
 
   useEffect(() => {
@@ -101,7 +115,8 @@ export default function CreateRecipePage() {
         return { 
           text: s.text, 
           image_url: stepImgUrl,
-          timer: s.timerMinutes ? parseInt(s.timerMinutes) * 60 : null 
+          timer: s.timerMinutes ? parseInt(s.timerMinutes) * 60 : null,
+          video_url: s.videoUrl || null
         };
       }));
 
@@ -109,10 +124,11 @@ export default function CreateRecipePage() {
       console.log("Creating recipe in database...");
       const result = await createRecipeAction({
         title,
-        category,
+        category: selectedCategories.join(', ') || "Основные блюда",
         description,
         price: parseFloat(price) || 0,
         image_url: mainImageUrl,
+        video_url: videoUrl || "",
         available_in_subscription: availableInSubscription,
         ingredients,
         steps: finalSteps
@@ -196,10 +212,31 @@ export default function CreateRecipePage() {
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-serif italic text-2xl" placeholder="Например: Идеальный Гребешок" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-2 font-medium">Категория</label>
-                      <input type="text" value={category} onChange={e => setCategory(e.target.value)} className="w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-light" />
+                      <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-3 font-medium">Вид блюда (можно выбрать несколько)</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-[#f8f7f2] p-6 rounded-2xl border border-[#e2e0d8]">
+                        {DISH_CATEGORIES.map((cat) => {
+                          const isChecked = selectedCategories.includes(cat);
+                          return (
+                            <label key={cat} className="flex items-center gap-2.5 text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                                  } else {
+                                    setSelectedCategories([...selectedCategories, cat]);
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                              />
+                              {cat}
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-2 font-medium">Цена (₽)</label>
@@ -218,6 +255,19 @@ export default function CreateRecipePage() {
                     <label htmlFor="subscriptionToggle" className="text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
                       Доступен по подписке (пользователи с активной подпиской получат доступ)
                     </label>
+                  </div>
+
+                  <div className="flex flex-col pt-4">
+                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-2 font-medium">
+                      Ссылка на видео или код вставки VK/YouTube (опционально)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={videoUrl} 
+                      onChange={e => setVideoUrl(e.target.value)} 
+                      className="w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-light text-sm" 
+                      placeholder="Вставьте ссылку на видео или код iframe..." 
+                    />
                   </div>
                 </div>
 
@@ -278,20 +328,35 @@ export default function CreateRecipePage() {
                       <div className="flex flex-col md:flex-row gap-6">
                         <div className="flex-1 flex flex-col gap-3">
                           <textarea value={s.text} onChange={e => { const newSteps = [...steps]; newSteps[i].text = e.target.value; setRecipeSteps(newSteps); }} rows={4} className="w-full border border-[#e2e0d8] rounded-2xl p-4 bg-transparent focus:outline-none focus:border-black font-light resize-none" placeholder={`Описание шага ${i + 1}...`} />
-                          <div className="flex items-center gap-2">
-                            <Timer size={14} className="text-[#8a8883]" />
-                            <input 
-                              type="number" 
-                              placeholder="Таймер (мин)" 
-                              value={s.timerMinutes || ""} 
-                              onChange={e => {
-                                 const newSteps = [...steps]; 
-                                 newSteps[i].timerMinutes = e.target.value; 
-                                 setRecipeSteps(newSteps); 
-                              }}
-                              className="border border-[#e2e0d8] rounded-lg px-3 py-1.5 text-xs font-light focus:outline-none focus:border-black w-32 bg-white"
-                            />
-                            <span className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium">Опционально</span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Timer size={14} className="text-[#8a8883]" />
+                              <input 
+                                type="number" 
+                                placeholder="Таймер (мин)" 
+                                value={s.timerMinutes || ""} 
+                                onChange={e => {
+                                   const newSteps = [...steps]; 
+                                   newSteps[i].timerMinutes = e.target.value; 
+                                   setRecipeSteps(newSteps); 
+                                }}
+                                className="border border-[#e2e0d8] rounded-lg px-3 py-1.5 text-xs font-light focus:outline-none focus:border-black w-32 bg-white"
+                              />
+                            </div>
+                            <div className="flex-1 flex items-center gap-2">
+                              <span className="text-[10px] text-[#8a8883] uppercase tracking-widest font-medium whitespace-nowrap">Видео:</span>
+                              <input 
+                                type="text" 
+                                placeholder="Ссылка на видео шага или iframe код" 
+                                value={s.videoUrl || ""} 
+                                onChange={e => {
+                                   const newSteps = [...steps]; 
+                                   newSteps[i].videoUrl = e.target.value; 
+                                   setRecipeSteps(newSteps); 
+                                }}
+                                className="flex-1 border border-[#e2e0d8] rounded-lg px-3 py-1.5 text-xs font-light focus:outline-none focus:border-black bg-white"
+                              />
+                            </div>
                           </div>
                         </div>
                         
@@ -315,7 +380,7 @@ export default function CreateRecipePage() {
                     </div>
                   ))}
 
-                  <button onClick={() => setRecipeSteps([...steps, { text: "", image: null, imagePreview: null, timerMinutes: "" }])} className="text-[10px] font-medium uppercase tracking-widest flex items-center gap-2 hover:opacity-70 bg-[#f6f5f0] px-6 py-3 rounded-full">
+                  <button onClick={() => setRecipeSteps([...steps, { text: "", image: null, imagePreview: null, timerMinutes: "", videoUrl: "" }])} className="text-[10px] font-medium uppercase tracking-widest flex items-center gap-2 hover:opacity-70 bg-[#f6f5f0] px-6 py-3 rounded-full">
                     <Plus size={14} /> Добавить шаг
                   </button>
                 </div>

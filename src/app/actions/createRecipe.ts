@@ -6,6 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+import { generateUniqueSlug } from "../../lib/slug";
+
 export async function createRecipeAction(
   recipeData: {
     title: string;
@@ -13,9 +15,10 @@ export async function createRecipeAction(
     description: string;
     price: number;
     image_url: string;
+    video_url?: string;
     available_in_subscription?: boolean;
     ingredients: string[];
-    steps: { text: string; image_url: string | null }[];
+    steps: { text: string; image_url: string | null; video_url?: string | null }[];
   }
 ) {
   try {
@@ -25,6 +28,8 @@ export async function createRecipeAction(
       return { success: false, error: "У вас нет прав для создания рецептов" };
     }
 
+    const slug = await generateUniqueSlug(recipeData.title);
+
     // 1. Insert into recipes and contents
     const recipe = await prisma.recipe.create({
       data: {
@@ -33,11 +38,19 @@ export async function createRecipeAction(
         description: recipeData.description,
         price: recipeData.price,
         imageUrl: recipeData.image_url,
+        videoUrl: recipeData.video_url || null,
+        slug,
         availableInSubscription: recipeData.available_in_subscription !== false,
         contents: {
           create: {
-            ingredients: recipeData.ingredients.filter(i => i.trim() !== ""),
-            steps: recipeData.steps.filter(s => s.text.trim() !== "")
+            ingredients: recipeData.ingredients.filter(i => i && typeof i === 'string' && i.trim() !== ""),
+            steps: recipeData.steps
+              .filter(s => s && s.text && typeof s.text === 'string' && s.text.trim() !== "")
+              .map(s => ({
+                text: s.text,
+                image_url: s.image_url,
+                video_url: s.video_url || null
+              }))
           }
         }
       }

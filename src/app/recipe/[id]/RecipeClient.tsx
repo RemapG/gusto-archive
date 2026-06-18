@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat, Edit2 } from "lucide-react";
 import { deleteRecipeAction } from "../../actions/deleteRecipe";
 import { getRecipeContentAction } from "../../actions/getRecipeContent";
 import { createPurchaseAction } from "../../actions/createPurchase";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import TimerButton from "../../../components/TimerButton";
+import { getVideoEmbedUrl } from "../../../lib/video";
 
 
 export default function RecipeClient({ initialRecipe, recipeId }: { initialRecipe: any, recipeId: string }) {
@@ -109,15 +110,26 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
         </Link>
 
         {role === 'admin' && (
-          <button 
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-            <span className="hidden sm:inline">{isDeleting ? "Удаление..." : "Удалить рецепт"}</span>
-            <span className="sm:hidden">Удалить</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <Link 
+              href={`/cabinet/edit/${recipeId}`}
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-[#8a8883] hover:text-[#2d2c2a] transition-colors"
+            >
+              <Edit2 size={12} />
+              <span className="hidden sm:inline">Редактировать</span>
+              <span className="sm:hidden">Правка</span>
+            </Link>
+            <div className="w-[1px] h-3 bg-[#e2e0d8]" />
+            <button 
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">{isDeleting ? "Удаление..." : "Удалить рецепт"}</span>
+              <span className="sm:hidden">Удалить</span>
+            </button>
+          </div>
         )}
       </header>
 
@@ -130,7 +142,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
               animate={{ opacity: 1, y: 0 }}
               className="text-[9px] md:text-[10px] text-[#8a8883] uppercase tracking-[0.3em] mb-4 md:mb-6 font-bold"
             >
-              {recipe.category} • ТЕХНИЧЕСКАЯ КАРТА
+              {recipe.category ? recipe.category.split(', ').join(' • ') : ''} • ТЕХНИЧЕСКАЯ КАРТА
             </motion.p>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
@@ -245,6 +257,29 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             Процесс приготовления
           </h3>
 
+          {hasAccess && recipe.video_url && (
+            <div className="mb-12 animate-fade-in">
+              {(() => {
+                const embedUrl = getVideoEmbedUrl(recipe.video_url);
+                if (embedUrl) {
+                  return (
+                    <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden bg-[#2d2c2a] border border-[#f1f0e9] shadow-2xl shadow-black/5">
+                      <iframe
+                        src={embedUrl}
+                        className="absolute inset-0 w-full h-full"
+                        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        frameBorder="0"
+                      />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div className="w-20 h-[1px] bg-[#f1f0e9] mx-auto mt-12" />
+            </div>
+          )}
+
           {loadingContent || hasAccess === null ? (
             <div className="space-y-12 animate-pulse">
               <div className="h-64 bg-[#f1f0e9] rounded-[3rem] w-full" />
@@ -276,6 +311,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
               {content?.steps?.map((step: any, i: number) => {
                 const stepText = typeof step === 'string' ? step : step.text;
                 const stepImage = typeof step === 'object' && step.image_url ? step.image_url : null;
+                const stepVideo = typeof step === 'object' && step.video_url ? step.video_url : null;
                 
                 return (
                   <motion.div 
@@ -310,6 +346,28 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                           fill 
                           className="object-cover hover:scale-105 transition-transform duration-1000" 
                         />
+                      </div>
+                    )}
+
+                    {stepVideo && (
+                      <div className="w-full">
+                        {(() => {
+                          const embedUrl = getVideoEmbedUrl(stepVideo);
+                          if (embedUrl) {
+                            return (
+                              <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden bg-[#2d2c2a] border border-[#f1f0e9] shadow-2xl shadow-black/5">
+                                <iframe
+                                  src={embedUrl}
+                                  className="absolute inset-0 w-full h-full"
+                                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                                  allowFullScreen
+                                  frameBorder="0"
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     )}
                     
