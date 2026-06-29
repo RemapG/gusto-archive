@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChefHat, Send, Mail, Globe } from "lucide-react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function AboutPage() {
   return (
@@ -27,21 +28,21 @@ export default function AboutPage() {
       {/* Main Content */}
       <section className="flex-1 px-8 md:px-16 py-12 md:py-20 w-full max-w-[1200px] mx-auto">
         <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-16">
-          {/* Left Column: Image Placeholder */}
+          {/* Left Column: Image */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="w-full lg:w-[450px] flex-shrink-0"
           >
-            <div className="relative aspect-[4/5] rounded-[3rem] overflow-hidden bg-[#f6f5f0] border border-[#e2e0d8] shadow-2xl shadow-black/5 flex flex-col items-center justify-center text-center p-8 text-[#8a8883]">
-              <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm">
-                <ChefHat size={40} className="text-[#2d2c2a]" />
-              </div>
-              <h4 className="text-lg font-serif italic text-[#2d2c2a] mb-2">Место для фото</h4>
-              <p className="text-[10px] uppercase tracking-widest text-[#8a8883]/60 font-medium leading-relaxed max-w-[240px]">
-                Загрузите ваш портрет или кулинарный снимок
-              </p>
+            <div className="relative aspect-[4/5] rounded-[3rem] overflow-hidden bg-[#f6f5f0] border border-[#e2e0d8] shadow-2xl shadow-black/5">
+              <Image
+                src="/lida.jpg"
+                alt="Лидия"
+                fill
+                priority
+                className="object-cover"
+              />
             </div>
           </motion.div>
 
@@ -56,18 +57,15 @@ export default function AboutPage() {
               О СВЯЗИ И ВДОХНОВЕНИИ • ОБ АВТОРЕ
             </span>
             <h1 className="text-5xl md:text-7xl font-serif italic tracking-tight leading-[1.15] mb-8 text-[#2d2c2a]">
-              Шеф-повар <br/>и создатель «В гостях у Лидии»
+              Лидия
             </h1>
             
             <div className="space-y-6 text-[#2d2c2a] font-light leading-relaxed text-sm md:text-base">
-              <p className="font-medium font-serif italic text-lg text-[#2d2c2a]/80">
-                «Кулинария — это искусство, запечатленное в технических картах, точности вкуса и поиске идеального баланса ингредиентов».
+              <p>
+                Меня зовут Лидия. Я готовлю с детства, но осознанно пришла на кухню 15 лет назад. Пройдя путь от кондитера с собственной кондитерской до стажировок в топовых ресторанах Петербурга и Москвы (Harvest, Animals, Savva), я поняла главное: настоящий вкус рождается в чистоте продукта и понимании его индивидуальности.
               </p>
               <p>
-                Здесь будет расположен ваш основной текст о себе. Расскажите о вашем профессиональном пути, кулинарной философии, подходе к разработке рецептов и о том, как вы создали этот цифровой архив вкуса.
-              </p>
-              <p>
-                Вы можете описать ваши любимые техники приготовления (например, су-вид, выпечка на закваске или ферментация) и вдохновение, которое движет вами при создании новых гастрономических карт.
+                Моя философия — авторская свобода. Я не привязываюсь к географии, но уважаю сезонность. Каждый рецепт здесь — это не просто инструкция, это история, которую я прожила на кухне, чтобы поделиться ею с тобой.
               </p>
             </div>
 
