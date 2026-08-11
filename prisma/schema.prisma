@@ -47,6 +47,7 @@ model User {
   sessions      Session[]
   chatMessages  ChatMessage[] @relation("UserChats")
   sentMessages  ChatMessage[] @relation("SentMessages")
+  comments      Comment[]
 }
 
 model VerificationToken {
@@ -72,6 +73,7 @@ model Recipe {
   purchases   Purchase[]
   contents    RecipeContent?
   courses     RecipeInCourse[]
+  comments    Comment[]
 }
 
 model RecipeContent {
@@ -149,4 +151,14 @@ model RecipeInCourse {
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@id([courseId, recipeId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  recipeId  String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat, Edit2 } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat, Edit2, MessageSquare } from "lucide-react";
 import { deleteRecipeAction } from "../../actions/deleteRecipe";
 import { getRecipeContentAction } from "../../actions/getRecipeContent";
 import { createPurchaseAction } from "../../actions/createPurchase";
@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import TimerButton from "../../../components/TimerButton";
 import { getVideoEmbedUrl } from "../../../lib/video";
+import { getCommentsAction, addCommentAction, deleteCommentAction } from "../../actions/comments";
 
 
 export default function RecipeClient({ initialRecipe, recipeId }: { initialRecipe: any, recipeId: string }) {
@@ -25,6 +26,64 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
   const [isDeleting, setIsDeleting] = useState(false);
 
   const role = (session?.user as any)?.role || "user";
+
+  const [comments, setComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [commentText, setCommentText] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadComments() {
+      try {
+        const res = await getCommentsAction(recipeId);
+        if (res.success && res.comments) {
+          setComments(res.comments);
+        }
+      } catch (err) {
+        console.error("Error loading comments:", err);
+      } finally {
+        setLoadingComments(false);
+      }
+    }
+    loadComments();
+  }, [recipeId]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+
+    setSubmittingComment(true);
+    setCommentError(null);
+    try {
+      const res = await addCommentAction(recipeId, commentText);
+      if (res.success && res.comment) {
+        setComments((prev) => [res.comment, ...prev]);
+        setCommentText("");
+      } else {
+        setCommentError(res.error || "Не удалось отправить комментарий");
+      }
+    } catch (err: any) {
+      setCommentError(err.message || "Ошибка соединения");
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Удалить этот комментарий?")) return;
+
+    try {
+      const res = await deleteCommentAction(commentId);
+      if (res.success) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+      } else {
+        alert("Ошибка при удалении: " + res.error);
+      }
+    } catch (err: any) {
+      alert("Ошибка при удалении: " + err.message);
+    }
+  };
 
   useEffect(() => {
     async function checkAccess() {
@@ -390,6 +449,145 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
               </motion.div>
             </div>
           )}
+
+          {/* Comments Section */}
+          <div className="mt-24 border-t border-[#f1f0e9] pt-16">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-10 text-[#8a8883] flex items-center gap-3">
+              <span className="w-8 h-[1px] bg-[#e2e0d8]" />
+              Отзывы и комментарии ({comments.length})
+            </h3>
+
+            {/* Comment Form */}
+            {session ? (
+              <form onSubmit={handleSubmitComment} className="mb-12 space-y-4">
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 rounded-full bg-[#2d2c2a] text-white flex items-center justify-center shrink-0 text-sm font-semibold uppercase">
+                    {session.user?.name ? session.user.name.charAt(0) : "U"}
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Поделитесь вашим отзывом или вопросом о рецепте..."
+                      rows={3}
+                      maxLength={1000}
+                      className="w-full px-4 py-3 rounded-2xl bg-[#f6f5f0] border border-[#e2e0d8] focus:border-[#2d2c2a] focus:bg-white outline-none resize-none text-sm transition-all placeholder:text-[#8a8883]"
+                    />
+                    {commentError && (
+                      <p className="text-xs text-red-500 font-medium">{commentError}</p>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-[#8a8883] font-medium">
+                        {commentText.length}/1000 символов
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={submittingComment || !commentText.trim()}
+                        className="bg-[#2d2c2a] text-white hover:bg-black disabled:opacity-40 disabled:hover:bg-[#2d2c2a] transition-all py-3 px-6 text-[10px] font-bold uppercase tracking-widest rounded-full cursor-pointer"
+                      >
+                        {submittingComment ? "Отправка..." : "Отправить"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              <div className="mb-12 p-6 rounded-[2rem] bg-[#f6f5f0] border border-[#f1f0e9] text-center">
+                <p className="text-xs text-[#8a8883] font-medium uppercase tracking-widest leading-loose mb-4">
+                  Чтобы оставлять комментарии и делиться своими результатами, пожалуйста, войдите в систему.
+                </p>
+                <Link
+                  href="/auth"
+                  className="inline-block bg-transparent border border-[#2d2c2a] text-[#2d2c2a] hover:bg-[#2d2c2a] hover:text-white transition-all py-3 px-8 text-[10px] font-bold uppercase tracking-widest rounded-full"
+                >
+                  Войти на сайт
+                </Link>
+              </div>
+            )}
+
+            {/* Comments List */}
+            {loadingComments ? (
+              <div className="space-y-6 animate-pulse">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-[#f1f0e9] shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-[#f1f0e9] rounded w-1/4" />
+                      <div className="h-8 bg-[#f1f0e9] rounded w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : comments.length === 0 ? (
+              <div className="text-center py-12 text-[#8a8883]">
+                <MessageSquare className="mx-auto mb-4 text-[#e2e0d8]" size={24} />
+                <p className="text-xs font-medium uppercase tracking-widest">Здесь пока нет комментариев. Будьте первыми!</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-4 border-b border-[#f1f0e9] pb-6 last:border-b-0 group">
+                    <div className="w-10 h-10 rounded-full bg-[#f1f0e9] overflow-hidden shrink-0 flex items-center justify-center border border-[#e2e0d8]">
+                      {comment.user.image ? (
+                        <Image
+                          src={comment.user.image}
+                          alt={comment.user.name}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm font-semibold uppercase text-[#8a8883]">
+                          {comment.user.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-serif italic text-base text-[#2d2c2a] font-medium">
+                            {comment.user.name}
+                          </span>
+                          {comment.user.role === "admin" && (
+                            <span className="text-[8px] bg-[#2d2c2a] text-white font-bold uppercase tracking-widest px-2 py-0.5 rounded">
+                              Шеф-повар
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[#8a8883] font-medium">
+                          {new Date(comment.createdAt).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-[#2d2c2a] font-light leading-relaxed whitespace-pre-wrap">
+                        {comment.text}
+                      </p>
+                      
+                      {/* Delete comment action */}
+                      {(session && ((session.user as any).id === comment.userId || (session.user as any).role === "admin")) && (
+                        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-red-400 hover:text-red-600 transition-colors text-[9px] uppercase tracking-widest font-semibold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Trash2 size={10} />
+                            Удалить
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>
