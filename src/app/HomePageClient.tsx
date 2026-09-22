@@ -151,7 +151,7 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
             transition={{ duration: 1, ease: "easeOut" }}
             className="max-w-2xl"
           >
-            <h1 className="font-serif italic text-5xl md:text-8xl leading-[1.1] mb-6 md:mb-8 text-foreground tracking-tight">
+            <h1 className="font-serif italic text-4xl sm:text-5xl md:text-8xl leading-[1.1] mb-6 md:mb-8 text-foreground tracking-tight break-words">
               {activeTab === "recipes" ? (
                 <>Рекомендуемые <br className="hidden md:block"/>рецепты</>
               ) : (

@@ -99,7 +99,7 @@ export default function BlogPostClient({ post }: { post: any }) {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-8 bg-white border border-[#e2e0d8] px-8 py-5 rounded-[2rem] shadow-sm mt-4 text-left"
+              className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-8 bg-white border border-[#e2e0d8] px-6 sm:px-8 py-4 sm:py-5 rounded-[2rem] shadow-sm mt-4 text-left max-w-full"
             >
               {post.placeName && (
                 <div className="flex items-center gap-2.5">

@@ -61,7 +61,7 @@ export default function MobileBottomNav() {
   return (
     <nav
       aria-label="Мобильная навигация"
-      className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 md:hidden w-[92%] max-w-[400px]"
+      className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 md:hidden w-[92%] max-w-[400px] touch-none select-none"
     >
       <div className="w-full flex items-center justify-around px-2 py-2 bg-black/40 text-white backdrop-blur-2xl backdrop-saturate-150 border border-white/20 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.25)]">
         {navItems.map((item) => {
