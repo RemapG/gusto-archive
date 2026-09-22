@@ -31,7 +31,7 @@ export default function AboutPage() {
           </Link>
         </nav>
 
-        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-[#8a8883] gap-4">
+        <div className="hidden md:flex items-center text-[10px] uppercase tracking-widest font-medium text-[#8a8883] gap-4">
           <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">
             Кабинет
           </Link>

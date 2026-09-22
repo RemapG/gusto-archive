@@ -234,22 +234,6 @@ export default function BlogListClient({ initialPosts }: { initialPosts: any[] }
         </div>
       </header>
 
-      {/* Mobile Nav bar (visible on mobile only) */}
-      <div className="flex md:hidden items-center justify-center gap-6 py-3 px-4 border-b border-[#f1f0e9] bg-white text-[10px] uppercase tracking-widest font-medium text-[#8a8883]">
-        <Link href="/" className="hover:text-[#2d2c2a] transition-colors">
-          Каталог
-        </Link>
-        <Link href="/blog" className="text-[#2d2c2a] font-bold border-b-2 border-[#2d2c2a] pb-0.5">
-          Блог
-        </Link>
-        <Link href="/about" className="hover:text-[#2d2c2a] transition-colors">
-          Обо мне
-        </Link>
-        <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">
-          Кабинет
-        </Link>
-      </div>
-
       {/* Hero Section */}
       <section className="px-6 md:px-16 pt-16 md:pt-24 pb-12 max-w-[1300px] mx-auto w-full text-center">
         <motion.span

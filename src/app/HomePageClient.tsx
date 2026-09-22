@@ -97,15 +97,6 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
         </nav>
 
         <div className="flex items-center gap-4">
-          <div className="flex md:hidden items-center gap-4 text-[10px] uppercase tracking-widest font-medium text-muted-foreground">
-            <Link href="/blog" className="hover:text-foreground transition-colors">
-              Блог
-            </Link>
-            <Link href="/about" className="hover:text-foreground transition-colors">
-              Обо мне
-            </Link>
-          </div>
-          
           {user ? (
             <div className="flex items-center gap-3 md:gap-4">
               {/* User profile button that links to cabinet */}

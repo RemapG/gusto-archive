@@ -143,10 +143,10 @@ export default function CabinetPage() {
           На главную
         </Link>
         <div className="flex items-center gap-6">
-          <Link href="/blog" className="text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
+          <Link href="/blog" className="hidden md:inline-block text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
             Блог
           </Link>
-          <Link href="/about" className="text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
+          <Link href="/about" className="hidden md:inline-block text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
             Обо мне
           </Link>
           <button 
