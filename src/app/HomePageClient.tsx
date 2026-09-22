@@ -81,6 +81,9 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
         </Link>
         
         <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-4 md:gap-6">
+          <Link href="/blog" className="hover:text-foreground transition-colors">
+            Блог
+          </Link>
           <Link href="/about" className="hover:text-foreground transition-colors">
             Обо мне
           </Link>
@@ -404,6 +407,7 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
           <div className="col-span-1 flex flex-col gap-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             <span className="text-[10px] text-border mb-2 text-foreground">НАВИГАЦИЯ</span>
             <Link href="/" className="hover:text-foreground transition-colors">Каталог</Link>
+            <Link href="/blog" className="hover:text-foreground transition-colors">Блог</Link>
             <Link href="/about" className="hover:text-foreground transition-colors">Обо мне</Link>
             <Link href="/cabinet" className="hover:text-foreground transition-colors">Кабинет</Link>
           </div>

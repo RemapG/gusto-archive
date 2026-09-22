@@ -83,3 +83,33 @@ export async function generateUniqueCourseSlug(title: string, currentCourseId?: 
   return slug;
 }
 
+/**
+ * Generates a unique slug for a blog post. If the slug already exists,
+ * appends a counter (e.g. harvest-review-1).
+ */
+export async function generateUniquePostSlug(title: string, currentPostId?: string): Promise<string> {
+  let baseSlug = slugify(title);
+  if (!baseSlug) baseSlug = "post";
+  
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (true) {
+    const existing = await prisma.post.findFirst({
+      where: { 
+        slug,
+        NOT: currentPostId ? { id: currentPostId } : undefined
+      }
+    });
+    
+    if (!existing) {
+      break;
+    }
+    
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  
+  return slug;
+}
+

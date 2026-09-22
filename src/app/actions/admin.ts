@@ -46,6 +46,7 @@ export async function getAdminStatsAction() {
     const totalPurchases = await prisma.purchase.count();
     const totalCourses = await prisma.course.count();
     const totalCoursePurchases = await prisma.coursePurchase.count();
+    const totalPosts = await prisma.post.count();
     const activeSubscriptions = users.filter(u => u.subscriptionExpiresAt && new Date(u.subscriptionExpiresAt) > new Date()).length;
 
     // Fetch all courses for admin dashboard list
@@ -65,15 +66,33 @@ export async function getAdminStatsAction() {
       lessonsCount: c.lessons.length
     }));
 
+    // Fetch all posts for admin dashboard list
+    const posts = await prisma.post.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedPosts = posts.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      placeName: p.placeName,
+      rating: p.rating,
+      category: p.category,
+      imageUrl: p.imageUrl,
+      createdAt: p.createdAt.toISOString()
+    }));
+
     return {
       success: true,
       users: formattedUsers,
       coursesList: formattedCourses,
+      postsList: formattedPosts,
       stats: {
         totalRecipes,
         totalPurchases,
         totalCourses,
         totalCoursePurchases,
+        totalPosts,
         activeSubscriptions
       }
     };

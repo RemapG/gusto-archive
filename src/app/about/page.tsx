@@ -19,6 +19,12 @@ export default function AboutPage() {
           <Link href="/" className="hover:text-[#2d2c2a] transition-colors">
             Каталог
           </Link>
+          <Link href="/blog" className="hover:text-[#2d2c2a] transition-colors">
+            Блог
+          </Link>
+          <Link href="/about" className="text-[#2d2c2a] font-bold border-b border-[#2d2c2a] pb-0.5">
+            Обо мне
+          </Link>
           <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">
             Кабинет
           </Link>
@@ -101,6 +107,7 @@ export default function AboutPage() {
           <div className="col-span-1 flex flex-col gap-4 text-xs font-medium uppercase tracking-widest text-[#8a8883]">
             <span className="text-[10px] text-border mb-2 text-[#2d2c2a]">НАВИГАЦИЯ</span>
             <Link href="/" className="hover:text-[#2d2c2a] transition-colors">Каталог</Link>
+            <Link href="/blog" className="hover:text-[#2d2c2a] transition-colors">Блог</Link>
             <Link href="/about" className="hover:text-[#2d2c2a] transition-colors">Обо мне</Link>
             <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">Кабинет</Link>
           </div>

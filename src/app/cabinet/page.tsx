@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ChefHat, Plus, LogOut } from "lucide-react";
+import { ArrowLeft, ChefHat, Plus, LogOut, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession, signOut } from "next-auth/react";
 import { getPurchasedRecipesAction } from "../actions/getPurchasedRecipes";
 import { subscribeAction, cancelSubscriptionAction } from "../actions/subscription";
 import { getAdminStatsAction, grantSubscriptionAction } from "../actions/admin";
 import { deleteCourseAction } from "../actions/deleteCourse";
+import { deletePostAction } from "../actions/posts";
 import UserChat from "@/components/chat/UserChat";
 import AdminChat from "@/components/chat/AdminChat";
 
@@ -142,6 +143,9 @@ export default function CabinetPage() {
           На главную
         </Link>
         <div className="flex items-center gap-6">
+          <Link href="/blog" className="text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
+            Блог
+          </Link>
           <Link href="/about" className="text-[10px] uppercase tracking-widest font-medium text-[#8a8883] hover:text-[#2d2c2a] transition-colors">
             Обо мне
           </Link>
@@ -347,7 +351,7 @@ export default function CabinetPage() {
             ) : (
               <div className="space-y-12">
                 {/* Карточки статистики */}
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-6">
                   <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
                     <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Всего рецептов</span>
                     <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalRecipes}</span>
@@ -367,6 +371,10 @@ export default function CabinetPage() {
                   <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
                     <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Подписки</span>
                     <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.activeSubscriptions}</span>
+                  </div>
+                  <div className="bg-white p-8 rounded-[2rem] border border-[#e2e0d8] shadow-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a8883] block mb-2 font-medium">Статей в блоге</span>
+                    <span className="text-3xl font-medium text-[#2d2c2a]">{adminData.stats.totalPosts ?? 0}</span>
                   </div>
                 </div>
 
@@ -506,6 +514,116 @@ export default function CabinetPage() {
                                   </Link>
                                   <button
                                     onClick={handleDeleteCourse}
+                                    className="text-[9px] uppercase tracking-wider font-bold text-red-500 hover:text-red-700 transition-colors"
+                                  >
+                                    Удалить
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Таблица статей и обзоров заведений */}
+                <div className="bg-white rounded-[2rem] border border-[#e2e0d8] shadow-sm overflow-hidden mt-8">
+                  <div className="p-8 border-b border-[#f1f0e9] flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-sm uppercase tracking-widest font-bold text-[#2d2c2a]">
+                        Блог и отзывы о заведениях
+                      </h3>
+                      <p className="text-[10px] uppercase tracking-wider text-[#8a8883] mt-1 font-medium">
+                        Статьи, рецепты и ресторанные обзоры с оценками
+                      </p>
+                    </div>
+                    <Link 
+                      href="/cabinet/posts/create"
+                      className="bg-[#2d2c2a] text-white px-6 py-2.5 rounded-full text-[9px] font-medium uppercase tracking-widest hover:bg-black transition-colors self-start sm:self-auto"
+                    >
+                      Создать публикацию
+                    </Link>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#f1f0e9] text-[10px] uppercase tracking-wider text-[#8a8883]">
+                          <th className="py-4 px-8 font-semibold">Название</th>
+                          <th className="py-4 px-8 font-semibold">Категория</th>
+                          <th className="py-4 px-8 font-semibold">Заведение</th>
+                          <th className="py-4 px-8 font-semibold">Оценка</th>
+                          <th className="py-4 px-8 font-semibold">Дата</th>
+                          <th className="py-4 px-8 font-semibold text-right">Действия</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#f1f0e9] text-xs font-medium text-[#2d2c2a]">
+                        {!adminData.postsList || adminData.postsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-xs text-[#8a8883] font-light">Публикаций пока нет. Нажмите «Создать публикацию», чтобы написать статью или отзыв.</td>
+                          </tr>
+                        ) : (
+                          adminData.postsList.map((post: any) => {
+                            const handleDeletePost = async () => {
+                              if (!confirm(`Вы уверены, что хотите удалить публикацию "${post.title}"?`)) return;
+                              const res = await deletePostAction(post.id);
+                              if (res.success) {
+                                alert("Публикация успешно удалена");
+                                router.refresh();
+                              } else {
+                                alert("Ошибка при удалении: " + res.error);
+                              }
+                            };
+
+                            return (
+                              <tr key={post.id} className="hover:bg-[#fcfcf9] transition-colors">
+                                <td className="py-5 px-8 font-serif italic text-sm">
+                                  <Link href={`/blog/${post.slug || post.id}`} className="hover:underline text-[#2d2c2a]">
+                                    {post.title}
+                                  </Link>
+                                </td>
+                                <td className="py-5 px-8">
+                                  <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold text-gray-700 bg-gray-100">
+                                    {post.category || "Статья"}
+                                  </span>
+                                </td>
+                                <td className="py-5 px-8 text-[#8a8883]">
+                                  {post.placeName ? (
+                                    <span className="text-[#2d2c2a] font-medium">{post.placeName}</span>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className="py-5 px-8">
+                                  {post.rating !== null && post.rating !== undefined ? (
+                                    <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded-md text-[11px]">
+                                      <Star size={11} className="fill-amber-500 text-amber-500" />
+                                      {post.rating} / 5
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#8a8883]">—</span>
+                                  )}
+                                </td>
+                                <td className="py-5 px-8 text-[#8a8883] text-[11px]">
+                                  {new Date(post.createdAt).toLocaleDateString("ru-RU")}
+                                </td>
+                                <td className="py-5 px-8 text-right space-x-4 whitespace-nowrap">
+                                  <Link 
+                                    href={`/blog/${post.slug || post.id}`}
+                                    className="text-[9px] uppercase tracking-wider font-bold text-[#8a8883] hover:text-[#2d2c2a]"
+                                    target="_blank"
+                                  >
+                                    Открыть
+                                  </Link>
+                                  <Link 
+                                    href={`/cabinet/posts/edit/${post.id}`}
+                                    className="text-[9px] uppercase tracking-wider font-bold text-[#2d2c2a] hover:underline"
+                                  >
+                                    Редактировать
+                                  </Link>
+                                  <button
+                                    onClick={handleDeletePost}
                                     className="text-[9px] uppercase tracking-wider font-bold text-red-500 hover:text-red-700 transition-colors"
                                   >
                                     Удалить
