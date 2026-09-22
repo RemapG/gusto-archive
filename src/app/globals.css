@@ -1,11 +1,26 @@
 @import "tailwindcss";
 
-html,
+html {
+  overflow-x: clip;
+}
+
 body {
   max-width: 100vw;
-  overflow-x: hidden;
-  touch-action: pan-x pan-y;
-  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Touch zoom prevention ONLY on mobile touchscreens */
+@media (pointer: coarse) {
+  html,
+  body {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+  }
 }
 
 :root {
@@ -25,15 +40,6 @@ body {
   
   --font-sans: var(--font-inter);
   --font-serif: var(--font-playfair);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior-y: contain;
 }
 
 /* Prevent auto-zooming on focus on mobile devices (iOS Safari / Telegram WebView) */

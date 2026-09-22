@@ -18,32 +18,12 @@ export default function TelegramInit() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // 1. Prevent iOS / Safari / WebKit pinch-to-zoom and multi-touch gestures
-    const preventPinchZoom = (e: TouchEvent) => {
-      if (e.touches && e.touches.length > 1) {
-        e.preventDefault();
-      }
-    };
-
+    // Prevent iOS Safari pinch gesture zoom without blocking scrolling
     const preventGesture = (e: Event) => {
       e.preventDefault();
     };
 
-    let lastTouchEnd = 0;
-    const preventDoubleTapZoom = (e: TouchEvent) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
-      }
-      lastTouchEnd = now;
-    };
-
-    document.addEventListener("touchstart", preventPinchZoom, { passive: false });
-    document.addEventListener("touchmove", preventPinchZoom, { passive: false });
     document.addEventListener("gesturestart", preventGesture);
-    document.addEventListener("gesturechange", preventGesture);
-    document.addEventListener("gestureend", preventGesture);
-    document.addEventListener("touchend", preventDoubleTapZoom, { passive: false });
 
     // 2. Telegram WebApp initialization
     const tg = window.Telegram?.WebApp;
@@ -89,12 +69,7 @@ export default function TelegramInit() {
     }
 
     return () => {
-      document.removeEventListener("touchstart", preventPinchZoom);
-      document.removeEventListener("touchmove", preventPinchZoom);
       document.removeEventListener("gesturestart", preventGesture);
-      document.removeEventListener("gesturechange", preventGesture);
-      document.removeEventListener("gestureend", preventGesture);
-      document.removeEventListener("touchend", preventDoubleTapZoom);
     };
   }, [pathname, router]);
 
