@@ -9,22 +9,29 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-[#fcfcf9] text-[#2d2c2a] selection:bg-[#e8e6df] font-sans flex flex-col">
       {/* Header */}
-      <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-[#fcfcf9] z-50">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+      <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-[#fcfcf9] z-50 relative border-b border-[#f1f0e9]">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity shrink-0">
           <ChefHat size={24} className="text-[#2d2c2a]" />
           <span className="font-serif italic text-xl md:text-2xl tracking-wide">В гостях у Лидии</span>
         </Link>
         
-        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-[#8a8883] gap-6">
+        {/* Centered Navigation Tabs */}
+        <nav className="hidden md:flex items-center gap-8 text-[11px] uppercase tracking-[0.2em] font-medium text-[#8a8883] absolute left-1/2 -translate-x-1/2">
           <Link href="/" className="hover:text-[#2d2c2a] transition-colors">
             Каталог
           </Link>
           <Link href="/blog" className="hover:text-[#2d2c2a] transition-colors">
             Блог
           </Link>
-          <Link href="/about" className="text-[#2d2c2a] font-bold border-b border-[#2d2c2a] pb-0.5">
+          <Link href="/about" className="text-[#2d2c2a] font-bold border-b-2 border-[#2d2c2a] pb-1">
             Обо мне
           </Link>
+          <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">
+            Кабинет
+          </Link>
+        </nav>
+
+        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-[#8a8883] gap-4">
           <Link href="/cabinet" className="hover:text-[#2d2c2a] transition-colors">
             Кабинет
           </Link>

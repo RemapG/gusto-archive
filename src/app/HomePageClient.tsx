@@ -74,19 +74,37 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-muted-foreground/30 font-sans flex flex-col">
       {/* Header */}
-      <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-background z-50">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+      <header className="px-4 py-6 md:px-16 w-full mx-auto flex justify-between items-center bg-background z-50 relative">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity shrink-0">
           <ChefHat size={24} className="text-foreground" />
           <span className="font-serif italic text-xl md:text-2xl tracking-wide">В гостях у Лидии</span>
         </Link>
         
-        <div className="flex items-center text-[10px] uppercase tracking-widest font-medium text-muted-foreground gap-4 md:gap-6">
+        {/* Centered Navigation Tabs */}
+        <nav className="hidden md:flex items-center gap-8 text-[11px] uppercase tracking-[0.2em] font-medium text-muted-foreground absolute left-1/2 -translate-x-1/2">
+          <Link href="/" className="text-foreground font-bold border-b-2 border-foreground pb-1">
+            Каталог
+          </Link>
           <Link href="/blog" className="hover:text-foreground transition-colors">
             Блог
           </Link>
           <Link href="/about" className="hover:text-foreground transition-colors">
             Обо мне
           </Link>
+          <Link href="/cabinet" className="hover:text-foreground transition-colors">
+            Кабинет
+          </Link>
+        </nav>
+
+        <div className="flex items-center gap-4">
+          <div className="flex md:hidden items-center gap-4 text-[10px] uppercase tracking-widest font-medium text-muted-foreground">
+            <Link href="/blog" className="hover:text-foreground transition-colors">
+              Блог
+            </Link>
+            <Link href="/about" className="hover:text-foreground transition-colors">
+              Обо мне
+            </Link>
+          </div>
           
           {user ? (
             <div className="flex items-center gap-3 md:gap-4">
