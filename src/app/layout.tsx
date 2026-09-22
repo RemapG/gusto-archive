@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import TelegramInit from "@/components/TelegramInit";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,8 +32,15 @@ export default function RootLayout({
       lang="ru"
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
+      <head>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className="min-h-full flex flex-col pb-24 md:pb-0">
         <Providers>
+          <TelegramInit />
           {children}
           <MobileBottomNav />
         </Providers>
