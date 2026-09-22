@@ -267,15 +267,6 @@ export default function BlogListClient({ initialPosts }: { initialPosts: any[] }
         >
           Кулинарный дневник & обзоры
         </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-sm md:text-base text-[#8a8883] font-light max-w-2xl mx-auto leading-relaxed"
-        >
-          Честные впечатления от ресторанов Петербурга и Москвы, профессиональные секреты,
-          авторские мысли о сезонных продуктах и поиске идеального вкуса.
-        </motion.p>
 
         {/* Admin Quick Action in Hero */}
         {isAdmin && (
