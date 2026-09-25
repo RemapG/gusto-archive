@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon, Timer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon, Timer, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateRecipeAction } from "../../../actions/updateRecipe";
 import { uploadToS3Action } from "../../../actions/uploadToS3";
+import { processImageFile } from "@/lib/imageConverter";
 
 const DISH_CATEGORIES = [
   "Закуски холодные",
@@ -53,6 +54,7 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
   const [price, setPrice] = useState(recipe.price.toString());
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(recipe.imageUrl);
+  const [processingMainImage, setProcessingMainImage] = useState(false);
   const [availableInSubscription, setAvailableInSubscription] = useState(recipe.availableInSubscription);
   const [videoUrl, setVideoUrl] = useState(recipe.videoUrl || "");
 
@@ -80,22 +82,45 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
         })
       : [{ text: "", image: null, imagePreview: null, timerMinutes: "", videoUrl: "" }]
   );
+  const [processingStepIndex, setProcessingStepIndex] = useState<number | null>(null);
 
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMainImage(file);
-      setMainImagePreview(URL.createObjectURL(file));
+      const originalFile = e.target.files[0];
+      setProcessingMainImage(true);
+      try {
+        const { file, previewUrl } = await processImageFile(originalFile);
+        setMainImage(file);
+        setMainImagePreview(previewUrl);
+      } catch (err) {
+        console.error("Error processing main image:", err);
+        setMainImage(originalFile);
+        setMainImagePreview(URL.createObjectURL(originalFile));
+      } finally {
+        setProcessingMainImage(false);
+      }
     }
   };
 
-  const handleStepImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStepImageChange = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const newSteps = [...steps];
-      newSteps[index].image = file;
-      newSteps[index].imagePreview = URL.createObjectURL(file);
-      setRecipeSteps(newSteps);
+      const originalFile = e.target.files[0];
+      setProcessingStepIndex(index);
+      try {
+        const { file, previewUrl } = await processImageFile(originalFile);
+        const newSteps = [...steps];
+        newSteps[index].image = file;
+        newSteps[index].imagePreview = previewUrl;
+        setRecipeSteps(newSteps);
+      } catch (err) {
+        console.error("Error processing step image:", err);
+        const newSteps = [...steps];
+        newSteps[index].image = originalFile;
+        newSteps[index].imagePreview = URL.createObjectURL(originalFile);
+        setRecipeSteps(newSteps);
+      } finally {
+        setProcessingStepIndex(null);
+      }
     }
   };
 
@@ -165,7 +190,11 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
       }, 1000);
     } catch (err: any) {
       console.error("Save error:", err);
-      setError(err.message || "Ошибка при сохранении изменений");
+      let errMsg = err.message || "Ошибка при сохранении изменений";
+      if (errMsg.includes("unexpected response") || errMsg.includes("Failed to fetch") || errMsg.includes("413")) {
+        errMsg = "Сервер отклонил файл из-за большого размера или сбоя связи. Пожалуйста, повторите попытку сохранения.";
+      }
+      setError(errMsg);
       setSaving(false);
     }
   };
@@ -226,15 +255,21 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
                     </label>
                     <div className="flex items-center gap-6">
                       <div className="w-32 h-40 bg-[#f6f5f0] rounded-2xl overflow-hidden relative border border-dashed border-[#e2e0d8] flex items-center justify-center">
-                        {mainImagePreview ? (
+                        {processingMainImage ? (
+                          <div className="flex flex-col items-center gap-2 p-2 text-center">
+                            <Loader2 size={24} className="animate-spin text-[#2d2c2a]" />
+                            <span className="text-[9px] uppercase tracking-wider text-[#8a8883] font-medium">Обработка...</span>
+                          </div>
+                        ) : mainImagePreview ? (
                           <img src={mainImagePreview} className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="text-[#e2e0d8]" />
                         )}
                       </div>
-                      <label className="bg-[#2d2c2a] text-white px-6 py-3 rounded-full text-[10px] font-medium uppercase tracking-widest hover:bg-black transition-colors cursor-pointer">
-                        Изменить фото
-                        <input type="file" accept="image/*" className="hidden" onChange={handleMainImageChange} />
+                      <label className="bg-[#2d2c2a] text-white px-6 py-3 rounded-full text-[10px] font-medium uppercase tracking-widest hover:bg-black transition-colors cursor-pointer flex items-center gap-2">
+                        {processingMainImage && <Loader2 size={12} className="animate-spin" />}
+                        {processingMainImage ? "Конвертация..." : "Изменить фото"}
+                        <input type="file" accept="image/*" className="hidden" disabled={processingMainImage} onChange={handleMainImageChange} />
                       </label>
                     </div>
                   </div>
@@ -497,7 +532,12 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
 
                         <div className="w-full md:w-40 flex-shrink-0">
                           <label className="block w-full h-24 border border-dashed border-[#e2e0d8] rounded-2xl overflow-hidden relative cursor-pointer hover:bg-[#f6f5f0] transition-colors flex items-center justify-center group">
-                            {s.imagePreview ? (
+                            {processingStepIndex === i ? (
+                              <div className="flex flex-col items-center gap-1 p-2 text-center">
+                                <Loader2 size={18} className="animate-spin text-[#2d2c2a]" />
+                                <span className="text-[9px] uppercase tracking-wider text-[#8a8883]">Обработка...</span>
+                              </div>
+                            ) : s.imagePreview ? (
                               <img src={s.imagePreview} className="w-full h-full object-cover" />
                             ) : (
                               <div className="text-center text-[#8a8883] group-hover:text-black">
@@ -507,7 +547,13 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
                                 </span>
                               </div>
                             )}
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleStepImageChange(i, e)} />
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              disabled={processingStepIndex === i} 
+                              onChange={(e) => handleStepImageChange(i, e)} 
+                            />
                           </label>
                         </div>
                       </div>

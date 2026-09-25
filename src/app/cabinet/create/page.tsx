@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon, Timer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Image as ImageIcon, Timer, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRecipeAction } from "../../actions/createRecipe";
 import { uploadToS3Action } from "../../actions/uploadToS3";
 import { useSession } from "next-auth/react";
+import { processImageFile } from "@/lib/imageConverter";
 
 const DISH_CATEGORIES = [
   "Закуски холодные",
@@ -22,6 +23,8 @@ const DISH_CATEGORIES = [
   "Курсы",
   "Гарниры"
 ];
+
+const DRAFT_KEY = "chef_recipe_draft_v1";
 
 export default function CreateRecipePage() {
   const { data: session, status } = useSession();
@@ -38,6 +41,7 @@ export default function CreateRecipePage() {
   const [price, setPrice] = useState("");
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [processingMainImage, setProcessingMainImage] = useState(false);
   const [availableInSubscription, setAvailableInSubscription] = useState(true);
   const [isFree, setIsFree] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
@@ -48,6 +52,11 @@ export default function CreateRecipePage() {
   const [steps, setRecipeSteps] = useState<any[]>([
     { text: "", image: null, imagePreview: null, timerMinutes: "", videoUrl: "" }
   ]);
+  const [processingStepIndex, setProcessingStepIndex] = useState<number | null>(null);
+
+  // Draft banner state
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftDate, setDraftDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -65,21 +74,140 @@ export default function CreateRecipePage() {
     }
   }, [status, router, session]);
 
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMainImage(file);
-      setMainImagePreview(URL.createObjectURL(file));
+  // Check for existing draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        const hasContent = Boolean(
+          draft.title || 
+          (draft.description && draft.description.trim()) || 
+          (draft.ingredients && draft.ingredients.some((i: string) => i && i.trim())) || 
+          (draft.steps && draft.steps.some((s: any) => s && s.text && s.text.trim()))
+        );
+        if (hasContent) {
+          setHasDraft(true);
+          if (draft.updatedAt) {
+            setDraftDate(new Date(draft.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error reading draft:", e);
+    }
+  }, []);
+
+  // Restore draft handler
+  const restoreDraft = () => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.title !== undefined) setTitle(draft.title);
+      if (draft.selectedCategories) setSelectedCategories(draft.selectedCategories);
+      if (draft.price !== undefined) setPrice(draft.price);
+      if (draft.isFree !== undefined) setIsFree(draft.isFree);
+      if (draft.availableInSubscription !== undefined) setAvailableInSubscription(draft.availableInSubscription);
+      if (draft.videoUrl !== undefined) setVideoUrl(draft.videoUrl);
+      if (draft.description !== undefined) setDescription(draft.description);
+      if (draft.ingredients && draft.ingredients.length > 0) setIngredients(draft.ingredients);
+      if (draft.steps && draft.steps.length > 0) {
+        setRecipeSteps(draft.steps.map((s: any) => ({
+          text: s.text || "",
+          image: null,
+          imagePreview: null,
+          timerMinutes: s.timerMinutes || "",
+          videoUrl: s.videoUrl || ""
+        })));
+      }
+      if (draft.step) setStep(draft.step);
+      setHasDraft(false);
+    } catch (e) {
+      console.error("Error restoring draft:", e);
     }
   };
 
-  const handleStepImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      setHasDraft(false);
+    } catch (e) {}
+  };
+
+  // Auto-save draft on changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const hasContent = Boolean(
+        title.trim() || 
+        description.trim() || 
+        ingredients.some(i => i && i.trim()) || 
+        steps.some(s => s && s.text && s.text.trim())
+      );
+      if (hasContent) {
+        try {
+          const draftData = {
+            title,
+            selectedCategories,
+            price,
+            isFree,
+            availableInSubscription,
+            videoUrl,
+            description,
+            ingredients,
+            steps: steps.map(s => ({
+              text: s.text,
+              timerMinutes: s.timerMinutes,
+              videoUrl: s.videoUrl
+            })),
+            step,
+            updatedAt: new Date().toISOString()
+          };
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+        } catch (e) {}
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [title, selectedCategories, price, isFree, availableInSubscription, videoUrl, description, ingredients, steps, step]);
+
+  const handleMainImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const newSteps = [...steps];
-      newSteps[index].image = file;
-      newSteps[index].imagePreview = URL.createObjectURL(file);
-      setRecipeSteps(newSteps);
+      const originalFile = e.target.files[0];
+      setProcessingMainImage(true);
+      try {
+        const { file, previewUrl } = await processImageFile(originalFile);
+        setMainImage(file);
+        setMainImagePreview(previewUrl);
+      } catch (err) {
+        console.error("Error processing main image:", err);
+        setMainImage(originalFile);
+        setMainImagePreview(URL.createObjectURL(originalFile));
+      } finally {
+        setProcessingMainImage(false);
+      }
+    }
+  };
+
+  const handleStepImageChange = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const originalFile = e.target.files[0];
+      setProcessingStepIndex(index);
+      try {
+        const { file, previewUrl } = await processImageFile(originalFile);
+        const newSteps = [...steps];
+        newSteps[index].image = file;
+        newSteps[index].imagePreview = previewUrl;
+        setRecipeSteps(newSteps);
+      } catch (err) {
+        console.error("Error processing step image:", err);
+        const newSteps = [...steps];
+        newSteps[index].image = originalFile;
+        newSteps[index].imagePreview = URL.createObjectURL(originalFile);
+        setRecipeSteps(newSteps);
+      } finally {
+        setProcessingStepIndex(null);
+      }
     }
   };
 
@@ -140,6 +268,9 @@ export default function CreateRecipePage() {
         throw new Error(result.error);
       }
 
+      // Clear draft on successful creation
+      clearDraft();
+
       console.log("Recipe created successfully, redirecting...");
       setSuccess(true);
       
@@ -151,7 +282,32 @@ export default function CreateRecipePage() {
       
     } catch (err: any) {
       console.error("Save error:", err);
-      setError(err.message || "Ошибка при сохранении рецепта");
+      // Persist draft immediately in case of error
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          title,
+          selectedCategories,
+          price,
+          isFree,
+          availableInSubscription,
+          videoUrl,
+          description,
+          ingredients,
+          steps: steps.map(s => ({
+            text: s.text,
+            timerMinutes: s.timerMinutes,
+            videoUrl: s.videoUrl
+          })),
+          step,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (e) {}
+
+      let errMsg = err.message || "Ошибка при сохранении рецепта";
+      if (errMsg.includes("unexpected response") || errMsg.includes("Failed to fetch") || errMsg.includes("413")) {
+        errMsg = "Сервер отклонил файл из-за большого размера или сбоя связи. Ваш текст сохранён в черновике! Попробуйте сохранить рецепт ещё раз.";
+      }
+      setError(errMsg);
       setSaving(false);
     }
   };
@@ -183,7 +339,34 @@ export default function CreateRecipePage() {
           ШАГ {step} ИЗ 3
         </p>
 
-        {error && <div className="mb-8 p-4 bg-red-50 text-red-600 text-sm font-light rounded-sm border border-red-100">{error}</div>}
+        {hasDraft && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📝</span>
+              <span>
+                Есть сохранённый черновик рецепта{draftDate ? ` (от ${draftDate})` : ""}. Восстановить в форму?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="bg-amber-900 text-white px-4 py-1.5 rounded-full font-medium hover:bg-black transition-colors"
+              >
+                Восстановить
+              </button>
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="text-amber-800 hover:text-amber-950 px-2 py-1.5 underline transition-colors"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <div className="mb-8 p-4 bg-red-50 text-red-600 text-sm font-light rounded-2xl border border-red-100">{error}</div>}
 
         <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-sm border border-[#e2e0d8]">
           <AnimatePresence mode="wait">
@@ -196,15 +379,21 @@ export default function CreateRecipePage() {
                     <label className="block text-[10px] uppercase tracking-widest text-[#8a8883] mb-2 font-medium">Фото блюда</label>
                     <div className="flex items-center gap-6">
                       <div className="w-32 h-40 bg-[#f6f5f0] rounded-2xl overflow-hidden relative border border-dashed border-[#e2e0d8] flex items-center justify-center">
-                        {mainImagePreview ? (
+                        {processingMainImage ? (
+                          <div className="flex flex-col items-center gap-2 p-2 text-center">
+                            <Loader2 size={24} className="animate-spin text-[#2d2c2a]" />
+                            <span className="text-[9px] uppercase tracking-wider text-[#8a8883] font-medium">Обработка...</span>
+                          </div>
+                        ) : mainImagePreview ? (
                           <img src={mainImagePreview} className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="text-[#e2e0d8]" />
                         )}
                       </div>
-                      <label className="bg-[#2d2c2a] text-white px-6 py-3 rounded-full text-[10px] font-medium uppercase tracking-widest hover:bg-black transition-colors cursor-pointer">
-                        Загрузить фото
-                        <input type="file" accept="image/*" className="hidden" onChange={handleMainImageChange} />
+                      <label className="bg-[#2d2c2a] text-white px-6 py-3 rounded-full text-[10px] font-medium uppercase tracking-widest hover:bg-black transition-colors cursor-pointer flex items-center gap-2">
+                        {processingMainImage && <Loader2 size={12} className="animate-spin" />}
+                        {processingMainImage ? "Конвертация..." : "Загрузить фото"}
+                        <input type="file" accept="image/*" className="hidden" disabled={processingMainImage} onChange={handleMainImageChange} />
                       </label>
                     </div>
                   </div>
@@ -398,7 +587,12 @@ export default function CreateRecipePage() {
                         
                         <div className="w-full md:w-40 flex-shrink-0">
                           <label className="block w-full h-24 border border-dashed border-[#e2e0d8] rounded-2xl overflow-hidden relative cursor-pointer hover:bg-[#f6f5f0] transition-colors flex items-center justify-center group">
-                            {s.imagePreview ? (
+                            {processingStepIndex === i ? (
+                              <div className="flex flex-col items-center gap-1 p-2 text-center">
+                                <Loader2 size={18} className="animate-spin text-[#2d2c2a]" />
+                                <span className="text-[9px] uppercase tracking-wider text-[#8a8883]">Обработка...</span>
+                              </div>
+                            ) : s.imagePreview ? (
                               <img src={s.imagePreview} className="w-full h-full object-cover" />
                             ) : (
                               <div className="text-center text-[#8a8883] group-hover:text-black">
@@ -406,7 +600,13 @@ export default function CreateRecipePage() {
                                 <span className="text-[10px] uppercase tracking-widest font-medium">Фото (опц.)</span>
                               </div>
                             )}
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleStepImageChange(i, e)} />
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              disabled={processingStepIndex === i} 
+                              onChange={(e) => handleStepImageChange(i, e)} 
+                            />
                           </label>
                         </div>
                       </div>
