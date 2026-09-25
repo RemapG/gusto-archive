@@ -423,8 +423,8 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
 
           <div className="col-span-1 flex flex-col gap-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             <span className="text-[10px] text-border mb-2 text-foreground">ЮРИДИЧЕСКАЯ ИНФОРМАЦИЯ</span>
-            <Link href="#" className="hover:text-foreground transition-colors">Условия использования</Link>
-            <Link href="#" className="hover:text-foreground transition-colors">Конфиденциальность</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Условия использования</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Конфиденциальность</Link>
           </div>
         </div>
       </footer>
