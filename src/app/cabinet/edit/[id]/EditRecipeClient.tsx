@@ -31,6 +31,7 @@ interface EditRecipeClientProps {
     imageUrl: string;
     videoUrl?: string;
     availableInSubscription: boolean;
+    isFree?: boolean;
     ingredients: string[];
     steps: any[];
   };
@@ -48,6 +49,7 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     recipe.category ? recipe.category.split(', ') : ["Основные блюда"]
   );
+  const [isFree, setIsFree] = useState(recipe.isFree ?? (recipe.price === 0));
   const [price, setPrice] = useState(recipe.price.toString());
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(recipe.imageUrl);
@@ -142,10 +144,11 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
         title,
         category: selectedCategories.join(', ') || "Основные блюда",
         description,
-        price: parseFloat(price) || 0,
+        price: isFree ? 0 : (parseFloat(price) || 0),
         image_url: mainImageUrl,
         video_url: videoUrl,
-        available_in_subscription: availableInSubscription,
+        available_in_subscription: isFree ? true : availableInSubscription,
+        is_free: isFree,
         ingredients,
         steps: finalSteps
       });
@@ -283,25 +286,49 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
                       </label>
                       <input
                         type="number"
-                        value={price}
+                        value={isFree ? "0" : price}
+                        disabled={isFree}
                         onChange={(e) => setPrice(e.target.value)}
-                        className="w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-light"
-                        placeholder="1000"
+                        className={`w-full border-b border-[#e2e0d8] py-3 bg-transparent focus:outline-none focus:border-black font-light ${isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        placeholder={isFree ? "Бесплатно (0 ₽)" : "1000"}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-4">
-                    <input
-                      type="checkbox"
-                      id="subscriptionToggle"
-                      checked={availableInSubscription}
-                      onChange={(e) => setAvailableInSubscription(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
-                    />
-                    <label htmlFor="subscriptionToggle" className="text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
-                      Доступен по подписке (пользователи с активной подпиской получат доступ)
-                    </label>
+                  <div className="flex flex-col gap-3 pt-5 border-t border-[#f1f0e9] mt-6">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="isFreeToggle"
+                        checked={isFree}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIsFree(checked);
+                          if (checked) {
+                            setPrice("0");
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                      />
+                      <label htmlFor="isFreeToggle" className="text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
+                        <strong className="font-semibold text-emerald-800">Доступен для всех бесплатно</strong> (даже для незарегистрированных пользователей)
+                      </label>
+                    </div>
+
+                    {!isFree && (
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="subscriptionToggle"
+                          checked={availableInSubscription}
+                          onChange={(e) => setAvailableInSubscription(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                        />
+                        <label htmlFor="subscriptionToggle" className="text-xs font-light text-[#2d2c2a] cursor-pointer select-none">
+                          Доступен по подписке (пользователи с активной подпиской получат доступ)
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col pt-4">
@@ -321,7 +348,7 @@ export default function EditRecipeClient({ recipe }: EditRecipeClientProps) {
                 <div className="mt-12 flex justify-end">
                   <button
                     onClick={() => setStep(2)}
-                    disabled={!title || !price}
+                    disabled={!title || (!isFree && !price)}
                     className="bg-[#2d2c2a] text-white px-8 py-3 rounded-full text-[10px] font-medium uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
                   >
                     Далее <ArrowRight size={14} />

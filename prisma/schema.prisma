@@ -69,6 +69,7 @@ model Recipe {
   videoUrl    String?
   slug        String?        @unique
   availableInSubscription Boolean @default(true)
+  isFree                  Boolean @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   purchases   Purchase[]

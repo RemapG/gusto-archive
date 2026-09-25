@@ -35,6 +35,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
     imageUrl: recipe.imageUrl || "",
     videoUrl: recipe.videoUrl || "",
     availableInSubscription: recipe.availableInSubscription,
+    isFree: recipe.isFree || Number(recipe.price) === 0,
     ingredients: (recipe.contents?.ingredients as string[]) || [],
     steps: (recipe.contents?.steps as any[]) || []
   };

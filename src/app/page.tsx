@@ -27,6 +27,7 @@ export default async function Home() {
     category: r.category,
     description: r.description,
     price: Number(r.price),
+    isFree: r.isFree || Number(r.price) === 0,
     image_url: r.imageUrl,
     slug: r.slug,
     created_at: r.createdAt.toISOString()

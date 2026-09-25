@@ -87,27 +87,22 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
 
   useEffect(() => {
     async function checkAccess() {
-      if (!session) {
-        setLoadingContent(false);
-        setPurchased(false);
-        setHasAccess(false);
-        return;
-      }
-
       setLoadingContent(true);
       try {
         const result = await getRecipeContentAction(recipeId);
         
-        if (result.success) {
+        if (result.success && result.content) {
           setContent(result.content);
           setPurchased(result.purchased ?? false);
           setHasAccess(result.hasAccess ?? false);
         } else {
-          setPurchased(false);
-          setHasAccess(false);
+          setContent(null);
+          setPurchased(result.purchased ?? false);
+          setHasAccess(result.hasAccess ?? false);
         }
       } catch (err) {
         console.error("Error loading recipe contents:", err);
+        setContent(null);
         setPurchased(false);
         setHasAccess(false);
       } finally {
@@ -219,7 +214,11 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             >
               <div className="flex flex-col">
                 <span className="text-[9px] uppercase tracking-widest text-[#8a8883] mb-1">Стоимость доступа</span>
-                <span className="text-xl md:text-2xl font-medium">{recipe.price} ₽</span>
+                {recipe.isFree || recipe.price === 0 ? (
+                  <span className="text-xl md:text-2xl font-serif italic text-emerald-800 font-normal">Бесплатно</span>
+                ) : (
+                  <span className="text-xl md:text-2xl font-medium">{recipe.price} ₽</span>
+                )}
               </div>
               <div className="hidden md:block h-10 w-[1px] bg-[#e2e0d8]" />
               <p className="text-xs text-[#8a8883] font-medium leading-relaxed max-w-md uppercase tracking-wider">
@@ -291,7 +290,7 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                   ))}
                 </motion.ul>
 
-                {purchased === false && role !== 'admin' && (
+                {purchased === false && role !== 'admin' && !recipe.isFree && recipe.price > 0 && (
                   <div className="mt-8 p-6 rounded-2xl bg-[#f6f5f0] border border-[#e2e0d8]">
                     <p className="text-[10px] font-medium uppercase tracking-widest text-[#8a8883] mb-3 leading-relaxed">
                       Доступ открыт по подписке Premium.
@@ -302,6 +301,18 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                     >
                       Купить навсегда за {recipe.price} ₽
                     </button>
+                  </div>
+                )}
+
+                {(recipe.isFree || recipe.price === 0) && (
+                  <div className="mt-8 p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/60">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-800 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-emerald-600" />
+                      Бесплатный рецепт
+                    </p>
+                    <p className="text-[11px] text-emerald-950/70 mt-1 font-light leading-relaxed">
+                      Открыт для всех гостей — даже без регистрации. Приятного приготовления!
+                    </p>
                   </div>
                 )}
               </div>

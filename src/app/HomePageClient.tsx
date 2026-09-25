@@ -327,6 +327,11 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
                         className="object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      {(recipe.isFree || recipe.price === 0) && (
+                        <div className="absolute top-3 left-3 bg-[#2d2c2a]/80 backdrop-blur-md text-white text-[9px] uppercase tracking-widest font-semibold px-3 py-1 rounded-full shadow-md">
+                          Бесплатно
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex justify-between items-start px-2">
@@ -336,7 +341,15 @@ export default function HomePageClient({ initialRecipes, initialCourses = [] }: 
                           {recipe.category ? recipe.category.split(', ').join(' • ') : ''}
                         </p>
                       </div>
-                      <div className="text-sm font-medium text-foreground whitespace-nowrap mt-1">{recipe.price} ₽</div>
+                      <div className="whitespace-nowrap mt-1">
+                        {recipe.isFree || recipe.price === 0 ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                            Бесплатно
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-foreground">{recipe.price} ₽</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </motion.div>

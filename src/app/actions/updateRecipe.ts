@@ -16,6 +16,7 @@ export async function updateRecipeAction(
     image_url: string;
     video_url?: string;
     available_in_subscription?: boolean;
+    is_free?: boolean;
     ingredients: string[];
     steps: { text: string; image_url: string | null; timer: number | null; video_url?: string | null }[];
   }
@@ -41,6 +42,8 @@ export async function updateRecipeAction(
       slug = await generateUniqueSlug(recipeData.title, recipeId);
     }
 
+    const isFree = recipeData.is_free === true || Number(recipeData.price) === 0;
+
     // Update the recipe and its content in a single transaction/operation
     await prisma.recipe.update({
       where: { id: recipeId },
@@ -48,11 +51,12 @@ export async function updateRecipeAction(
         title: recipeData.title,
         category: recipeData.category,
         description: recipeData.description,
-        price: recipeData.price,
+        price: isFree ? 0 : recipeData.price,
         imageUrl: recipeData.image_url,
         videoUrl: recipeData.video_url || null,
         slug,
-        availableInSubscription: recipeData.available_in_subscription !== false,
+        availableInSubscription: isFree ? true : recipeData.available_in_subscription !== false,
+        isFree,
         contents: {
           upsert: {
             create: {

@@ -6,24 +6,35 @@ import { prisma } from "@/lib/prisma";
 
 export async function getRecipeContentAction(recipeId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
-    }
-
-    const userId = (session.user as any).id;
-    const userRole = (session.user as any).role;
-
-    // Fetch recipe metadata
+    // 1. Fetch recipe metadata
     const recipe = await prisma.recipe.findUnique({
       where: { id: recipeId },
-      select: { availableInSubscription: true }
+      select: { availableInSubscription: true, isFree: true, price: true }
     });
 
     if (!recipe) {
       return { success: false, error: "Рецепт не найден" };
     }
+
+    const isFree = recipe.isFree || Number(recipe.price) === 0;
+
+    // 2. If free, anyone (even unregistered/anonymous) gets immediate full access!
+    if (isFree) {
+      const content = await prisma.recipeContent.findUnique({
+        where: { recipeId }
+      });
+      return { success: true, content, purchased: false, hasAccess: true, isFree: true };
+    }
+
+    // 3. For paid recipes, check session
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return { success: true, content: null, purchased: false, hasAccess: false, isFree: false };
+    }
+
+    const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
 
     // Admin can see everything
     if (userRole === 'admin') {

@@ -17,6 +17,7 @@ export async function createRecipeAction(
     image_url: string;
     video_url?: string;
     available_in_subscription?: boolean;
+    is_free?: boolean;
     ingredients: string[];
     steps: { text: string; image_url: string | null; video_url?: string | null }[];
   }
@@ -29,6 +30,7 @@ export async function createRecipeAction(
     }
 
     const slug = await generateUniqueSlug(recipeData.title);
+    const isFree = recipeData.is_free === true || Number(recipeData.price) === 0;
 
     // 1. Insert into recipes and contents
     const recipe = await prisma.recipe.create({
@@ -36,11 +38,12 @@ export async function createRecipeAction(
         title: recipeData.title,
         category: recipeData.category,
         description: recipeData.description,
-        price: recipeData.price,
+        price: isFree ? 0 : recipeData.price,
         imageUrl: recipeData.image_url,
         videoUrl: recipeData.video_url || null,
         slug,
-        availableInSubscription: recipeData.available_in_subscription !== false,
+        availableInSubscription: isFree ? true : recipeData.available_in_subscription !== false,
+        isFree,
         contents: {
           create: {
             ingredients: recipeData.ingredients.filter(i => i && typeof i === 'string' && i.trim() !== ""),
