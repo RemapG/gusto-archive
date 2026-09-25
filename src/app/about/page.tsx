@@ -121,7 +121,6 @@ export default function AboutPage() {
 
           <div className="col-span-1 flex flex-col gap-4 text-xs font-medium uppercase tracking-widest text-[#8a8883]">
             <span className="text-[10px] text-border mb-2 text-[#2d2c2a]">ЮРИДИЧЕСКАЯ ИНФОРМАЦИЯ</span>
-            <Link href="/terms" className="hover:text-[#2d2c2a] transition-colors">Условия использования</Link>
             <Link href="/privacy" className="hover:text-[#2d2c2a] transition-colors">Конфиденциальность</Link>
           </div>
         </div>

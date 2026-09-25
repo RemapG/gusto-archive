@@ -140,7 +140,6 @@ export default function PrivacyPage() {
             <span className="font-serif italic text-base text-[#2d2c2a]">В гостях у Лидии</span>
           </div>
           <div className="flex gap-6 uppercase tracking-wider text-[10px]">
-            <Link href="/terms" className="hover:text-[#2d2c2a] transition-colors">Оферта</Link>
             <Link href="/privacy" className="text-[#2d2c2a] font-bold">Политика конфиденциальности</Link>
             <Link href="/" className="hover:text-[#2d2c2a] transition-colors">Каталог</Link>
           </div>
