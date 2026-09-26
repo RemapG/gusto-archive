@@ -23,6 +23,23 @@ body {
   }
 }
 
+/* Modal open state: strict scroll lock and bottom navigation hiding */
+body.modal-open,
+body[data-modal-open="true"] {
+  overflow: hidden !important;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+body.modal-open nav[aria-label="Мобильная навигация"],
+body[data-modal-open="true"] nav[aria-label="Мобильная навигация"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(200%) !important;
+}
+
 :root {
   --background: #f6f5f0;
   --foreground: #2d2c2a;

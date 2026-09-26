@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,22 +31,96 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
 
   const role = (session?.user as any)?.role || "user";
 
-  // Lock body scroll and listen for Escape key when modal is open
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll, sync Telegram WebApp header/background, and listen for Escape key
+  useEffect(() => {
+    if (!modalImage) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setModalImage(null);
       }
     };
-    if (modalImage) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Save scroll position and strictly freeze body on iOS and mobile browsers
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
+    document.body.setAttribute("data-modal-open", "true");
+
+    // Telegram WebApp header & background color adaptation
+    const tg = window.Telegram?.WebApp;
+    const handleTgBack = () => {
+      setModalImage(null);
+    };
+
+    if (tg) {
+      try {
+        tg.setHeaderColor?.("#000000");
+        tg.setBackgroundColor?.("#000000");
+        tg.disableVerticalSwipes?.();
+        if (tg.BackButton) {
+          tg.BackButton.show();
+          tg.BackButton.onClick(handleTgBack);
+        }
+      } catch (err) {
+        console.warn(err);
+      }
     }
+
+    // Adapt meta theme-color for browser status bars
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    let createdMeta = false;
+    if (!metaTheme) {
+      metaTheme = document.createElement("meta");
+      metaTheme.setAttribute("name", "theme-color");
+      document.head.appendChild(metaTheme);
+      createdMeta = true;
+    }
+    const prevTheme = metaTheme.getAttribute("content") || "#fcfcf9";
+    metaTheme.setAttribute("content", "#000000");
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
       document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
+      document.body.removeAttribute("data-modal-open");
+      window.scrollTo(0, scrollY);
+
+      if (metaTheme) {
+        if (createdMeta) {
+          metaTheme.remove();
+        } else {
+          metaTheme.setAttribute("content", prevTheme);
+        }
+      }
+
+      if (tg) {
+        try {
+          tg.setHeaderColor?.("#fcfcf9");
+          tg.setBackgroundColor?.("#fcfcf9");
+          if (tg.BackButton) {
+            tg.BackButton.offClick(handleTgBack);
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+      }
     };
   }, [modalImage]);
 
@@ -645,64 +720,85 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
         </div>
       </div>
 
-      {/* Full-screen Lightbox Modal */}
-      <AnimatePresence>
-        {modalImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setModalImage(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6 md:p-10 select-none"
-          >
-            {/* Close button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setModalImage(null);
-              }}
-              className="absolute top-5 right-5 md:top-8 md:right-8 z-10 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-lg border border-white/20 transition-all cursor-pointer shadow-2xl"
-              aria-label="Закрыть"
-            >
-              <X size={20} />
-            </button>
-
-            {/* Modal Content */}
+      {/* Full-screen Lightbox Modal (Portal to body above all UI & navigation) */}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {modalImage && (
             <motion.div
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setModalImage(null)}
+              className="fixed inset-0 z-[99999] h-[100dvh] w-screen bg-black/95 backdrop-blur-2xl flex flex-col justify-between items-center px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] select-none touch-none overscroll-none"
+              onTouchMove={(e) => {
+                if (e.target === e.currentTarget) {
+                  e.preventDefault();
+                }
+              }}
             >
-              <div className="relative max-h-[80vh] flex items-center justify-center overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl bg-black/40 border border-white/10">
+              {/* Top control bar: pull pill & close button */}
+              <div className="w-full max-w-4xl relative flex items-center justify-center shrink-0 py-2">
+                <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModalImage(null);
+                  }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 text-white flex items-center justify-center backdrop-blur-lg border border-white/20 transition-all cursor-pointer shadow-2xl"
+                  aria-label="Закрыть"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Center: Draggable image with swipe-down to dismiss */}
+              <motion.div
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.65}
+                onDragEnd={(_, info) => {
+                  if (Math.abs(info.offset.y) > 80 || Math.abs(info.velocity.y) > 400) {
+                    setModalImage(null);
+                  }
+                }}
+                initial={{ scale: 0.94, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative flex-1 w-full max-w-4xl flex items-center justify-center my-auto min-h-0 cursor-grab active:cursor-grabbing touch-none py-2"
+              >
                 <img
                   src={modalImage.src}
                   alt={modalImage.title || "Фото рецепта"}
-                  className="max-w-full max-h-[78vh] object-contain rounded-2xl"
+                  className="max-w-full max-h-[70dvh] object-contain rounded-2xl md:rounded-3xl shadow-2xl pointer-events-none"
                 />
-              </div>
+              </motion.div>
 
+              {/* Bottom: Caption card */}
               {(modalImage.title || modalImage.subtitle) && (
-                <div className="max-w-xl text-center px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-xl">
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-lg text-center px-5 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-xl shrink-0 mt-2"
+                >
                   {modalImage.title && (
                     <p className="font-serif italic text-base md:text-lg text-white">
                       {modalImage.title}
                     </p>
                   )}
                   {modalImage.subtitle && (
-                    <p className="text-[11px] md:text-xs text-white/70 font-light mt-1 line-clamp-2">
+                    <p className="text-[11px] md:text-xs text-white/70 font-light mt-1 line-clamp-3">
                       {modalImage.subtitle}
                     </p>
                   )}
                 </div>
               )}
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </main>
   );
 }

@@ -12,6 +12,25 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkModal = () => {
+      const open =
+        document.body.classList.contains("modal-open") ||
+        document.body.getAttribute("data-modal-open") === "true";
+      setIsModalOpen(open);
+    };
+
+    checkModal();
+    const observer = new MutationObserver(checkModal);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-modal-open"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -57,6 +76,8 @@ export default function MobileBottomNav() {
       badge: unreadCount,
     },
   ];
+
+  if (isModalOpen) return null;
 
   return (
     <nav
