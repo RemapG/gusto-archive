@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat, Edit2, MessageSquare } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Trash2, ChefHat, Edit2, MessageSquare, X, Maximize2 } from "lucide-react";
 import { deleteRecipeAction } from "../../actions/deleteRecipe";
 import { getRecipeContentAction } from "../../actions/getRecipeContent";
 import { createPurchaseAction } from "../../actions/createPurchase";
@@ -19,13 +19,35 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
   const { data: session } = useSession();
   const router = useRouter();
   const recipe = initialRecipe;
+  const mainImg = recipe.imageUrl || recipe.image_url || "";
+  const hasMainImg = Boolean(mainImg && mainImg !== "/placeholder.jpg");
   const [content, setContent] = useState<any>(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [purchased, setPurchased] = useState<boolean | null>(null); // null = checking, true = yes, false = no
   const [hasAccess, setHasAccess] = useState<boolean | null>(null); // null = checking, true = yes, false = no
   const [isDeleting, setIsDeleting] = useState(false);
+  const [modalImage, setModalImage] = useState<{ src: string; title?: string; subtitle?: string } | null>(null);
 
   const role = (session?.user as any)?.role || "user";
+
+  // Lock body scroll and listen for Escape key when modal is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setModalImage(null);
+      }
+    };
+    if (modalImage) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [modalImage]);
 
   const [comments, setComments] = useState<any[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);
@@ -227,19 +249,28 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             </motion.div>
           </div>
 
-          {recipe.imageUrl && !['/placeholder.jpg', '/scallop.png'].includes(recipe.imageUrl) && (
+          {hasMainImg && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
-              className="w-full lg:w-[400px] aspect-[4/5] relative rounded-[3rem] overflow-hidden shadow-2xl shadow-black/5 border border-[#f1f0e9]"
+              onClick={() => setModalImage({ src: mainImg, title: recipe.title, subtitle: "Финальная подача блюда" })}
+              className="w-full lg:w-[460px] h-[340px] sm:h-[420px] lg:h-[480px] relative rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl shadow-black/5 border border-[#f1f0e9] cursor-zoom-in group shrink-0 bg-[#f6f5f0]"
             >
               <Image 
-                src={recipe.imageUrl}
+                src={mainImg}
                 alt={recipe.title}
                 fill
-                className="object-cover"
+                priority
+                sizes="(max-width: 1024px) 100vw, 460px"
+                className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
+              <div className="absolute bottom-5 left-5 md:bottom-7 md:left-7">
+                <span className="bg-white/95 backdrop-blur-md text-[#2d2c2a] text-[10px] md:text-xs uppercase tracking-widest font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 transform group-hover:scale-105 transition-transform">
+                  <Maximize2 size={13} /> Открыть фото
+                </span>
+              </div>
             </motion.div>
           )}
         </div>
@@ -360,9 +391,9 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
             </div>
           ) : hasAccess === false ? (
             <div className="relative aspect-video rounded-[3rem] overflow-hidden group cursor-pointer bg-[#2d2c2a]" onClick={handlePurchase}>
-              {recipe.imageUrl && !['/placeholder.jpg', '/scallop.png'].includes(recipe.imageUrl) && (
+              {hasMainImg && (
                 <Image 
-                  src={recipe.imageUrl} 
+                  src={mainImg} 
                   alt="Locked Content" 
                   fill 
                   className="object-cover blur-md scale-110 opacity-40 grayscale transition-all duration-700 group-hover:scale-100 group-hover:blur-sm" 
@@ -409,13 +440,25 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
                     </div>
                     
                     {stepImage && (
-                      <div className="relative w-full aspect-[16/9] rounded-[2.5rem] overflow-hidden bg-[#f6f5f0] shadow-2xl shadow-black/5">
-                        <Image 
+                      <div 
+                        onClick={() => setModalImage({ src: stepImage, title: `Шаг ${i + 1}`, subtitle: stepText })}
+                        className="relative w-full rounded-[2rem] md:rounded-[2.5rem] overflow-hidden bg-[#f8f7f4] shadow-lg shadow-black/5 border border-[#f1f0e9] cursor-zoom-in group flex items-center justify-center my-2"
+                      >
+                        <img 
                           src={stepImage} 
-                          alt={`Шаг ${i+1}`} 
-                          fill 
-                          className="object-cover hover:scale-105 transition-transform duration-1000" 
+                          alt={`Шаг ${i + 1}`} 
+                          className="w-full max-h-[580px] object-cover sm:object-contain group-hover:scale-[1.01] transition-transform duration-500" 
                         />
+                        <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <span className="bg-white/95 backdrop-blur-md text-[#2d2c2a] text-[10px] uppercase tracking-widest font-semibold px-4 py-2 rounded-full shadow-xl flex items-center gap-2 transform scale-95 group-hover:scale-100 transition-transform">
+                            <Maximize2 size={13} /> Открыть фото
+                          </span>
+                        </div>
+                        <div className="absolute bottom-3 right-3 sm:hidden pointer-events-none">
+                          <span className="bg-black/60 text-white backdrop-blur-md text-[9px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                            <Maximize2 size={10} /> Увеличить
+                          </span>
+                        </div>
                       </div>
                     )}
 
@@ -601,6 +644,65 @@ export default function RecipeClient({ initialRecipe, recipeId }: { initialRecip
           </div>
         </div>
       </div>
+
+      {/* Full-screen Lightbox Modal */}
+      <AnimatePresence>
+        {modalImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setModalImage(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6 md:p-10 select-none"
+          >
+            {/* Close button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setModalImage(null);
+              }}
+              className="absolute top-5 right-5 md:top-8 md:right-8 z-10 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-lg border border-white/20 transition-all cursor-pointer shadow-2xl"
+              aria-label="Закрыть"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center gap-4"
+            >
+              <div className="relative max-h-[80vh] flex items-center justify-center overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl bg-black/40 border border-white/10">
+                <img
+                  src={modalImage.src}
+                  alt={modalImage.title || "Фото рецепта"}
+                  className="max-w-full max-h-[78vh] object-contain rounded-2xl"
+                />
+              </div>
+
+              {(modalImage.title || modalImage.subtitle) && (
+                <div className="max-w-xl text-center px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-xl">
+                  {modalImage.title && (
+                    <p className="font-serif italic text-base md:text-lg text-white">
+                      {modalImage.title}
+                    </p>
+                  )}
+                  {modalImage.subtitle && (
+                    <p className="text-[11px] md:text-xs text-white/70 font-light mt-1 line-clamp-2">
+                      {modalImage.subtitle}
+                    </p>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

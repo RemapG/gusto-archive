@@ -40,6 +40,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     isFree: recipe.isFree || Number(recipe.price) === 0,
     availableInSubscription: recipe.availableInSubscription,
     image_url: recipe.imageUrl,
+    imageUrl: recipe.imageUrl,
     video_url: recipe.videoUrl || "",
     created_at: recipe.createdAt.toISOString()
   };
